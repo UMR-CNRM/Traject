@@ -1,0 +1,12 @@
+{
+        "classobj": "Centre0D",
+        "nameobj":"Cyclone",
+	"name": "SimplyClose",
+	"varalgo": {"last_start":0,"maxdist":300.0,"maxspeed":100.0},
+	"domtraj":{"lonmin":-30.0,"latmin":35.0,"lonmax":20.0,"latmax":60.0},
+	"parfilt":{"mslp":0.0},
+	"parres":{"all":0},
+	"specfields":{"track":"mslp"},
+	"diag_parameter":["mslp_o"]
+}
+

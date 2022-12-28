@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use Traject, you shall cite it as below."
+authors:
+- family-names: "Plu"
+  given-names: "Matthieu"
+  orcid: "https://orcid.org/0000-0002-5374-1895"
+- family-names: "Joly"
+  given-names: "Bruno"
+title: "Traject"
+version: 0.8
+date-released: 2023-01-02
+url: "https://github.com/UMR-CNRM/Traject"

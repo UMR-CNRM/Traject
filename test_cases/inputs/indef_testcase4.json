@@ -1,0 +1,13 @@
+{
+	"origin": "an",
+	"cutoff": "assim",
+	"model": "IFS",
+	"domain":"Med025",
+	"experiment": "ERA5",
+	"nativefmt": "nc",
+	"param_nc":{"mslp":"msl","rv":"vo","u":"u","v":"v"},
+	"param_file":{"mslp":"msl","rv850":"vo","u850":"uv","v850":"uv","u700":"uv","v700":"uv","u500":"uv","v500":"uv"},
+	"special_keys":["ff_uv"],
+	"directory": "/home/plum/Bureau/Traject/data/ERA5/",
+	"filename":"[experiment]_[YYYY]_[param_file].[nativefmt]"
+}

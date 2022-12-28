@@ -1,0 +1,12 @@
+{
+	"origin": "fc",
+	"cutoff": "production",
+	"model": "arpege",
+	"domain":"glob05",
+	"experiment": "oper",
+	"nativefmt": "grib",
+	"member": "000",
+	"special_keys":["rv_av"],
+	"directory": "/home/plum/Bureau/Traject/data/ARPfc/",
+	"filename": "grid.[model]-forecast.[domain]+[term:4]:00.[nativefmt]"
+}
