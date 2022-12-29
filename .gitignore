@@ -2,8 +2,9 @@ src/*.py[co~]
 src/__pycache__/
 
 #Test files
-test_cases/test?/*.json
 test_cases/test?/*.png
+test_cases/test?/*.log
+test_cases/test?/track_test*.json
 test_cases/tmp/case*/*.nc
 test_cases/tmp/case*/*.grib
 

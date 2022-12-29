@@ -1,0 +1,14 @@
+{
+    "origin": "fc",
+    "cutoff": "production",
+    "model": "arpege",
+    "domain": "glob05",
+    "experiment": "oper",
+    "directory": "/cnrm/recyf/NO_SAVE/Data/users/plu/TRAJECT/PEARP/",
+    "filename": "XTRACT[YYYYMMDDHH]_[term:4]_m[member].grib",
+    "special_keys": [
+        "rv_av"
+    ],
+    "member": "034",
+    "nativefmt": "grib"
+}

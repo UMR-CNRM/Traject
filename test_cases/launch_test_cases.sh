@@ -3,7 +3,7 @@
 #This file describes the test cases and processes them
 #The logs and output files are generated in a dedicated directory (./tests_cases/test{N}/)
 
-#PYTHONPATH=../src:$PYTHONPATH
+PYTHONPATH=../src:$PYTHONPATH
 
 ########################
 #Test case 1 : mslp algorithm on extratropical cyclone Alex on an ARPEGE +48h forecast
