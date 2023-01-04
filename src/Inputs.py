@@ -27,8 +27,8 @@ import Tools
 
 time_fmt = "%Y%m%d%H"
 
-os.environ["ECCODES_SAMPLES_PATH"] = ("/home/common/epygram/ext/eccodes/"
-                                      "share/eccodes/samples/")
+#os.environ["ECCODES_SAMPLES_PATH"] = ("/home/common/epygram/ext/eccodes/"
+#                                      "share/eccodes/samples/")
 
 #______________________________________________________________________________
 

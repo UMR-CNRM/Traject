@@ -187,8 +187,10 @@ def PrepareFiles(algo,indf,dirkeys,timetraj,**kwargs):
         # - PERFORM FIELD EXTRACTION IF REQUIRED
         ###
         if "extract" in dirkeys.keys():
+            print("Performing field extraction ...")
             for ivi in range(len(lfile)):
                 fic=lfile[ivi]
+                print(fic)
                 inst=linst[ivi]
                 binst=lbase[ivi]
                 term=linst[ivi]-datetime.strptime(lbase[ivi],time_fmt)
@@ -220,6 +222,7 @@ def PrepareFiles(algo,indf,dirkeys,timetraj,**kwargs):
         # - PERFORM SUBDOMAIN AND FILTERING IF REQUIRED
         ###
         if "filter" in dirkeys.keys():
+            print("Performing filtering and subdomain extraction ...")
 
             if imb==0: #first member loop only
                 #Define domains and resolutions
@@ -232,6 +235,7 @@ def PrepareFiles(algo,indf,dirkeys,timetraj,**kwargs):
 
             for ivi in range(len(lfile)):
                 fic=lfile[ivi]
+                print(fic)
                 inst=linst[ivi]
                 binst=lbase[ivi]       
                 term=linst[ivi]-datetime.strptime(lbase[ivi],time_fmt)
@@ -567,8 +571,7 @@ def Read(inputfile,select=["all"]):
     filename=inputfile.replace('.'+filefmt,'')
     #print(filename,filefmt)
     if filefmt.lower()=="json":
-        print("JSON file")
-
+        #print("JSON file")
         json_file = open(inputfile)
         datain = json.load(json_file)
         #print(datain[0]["inputdef"])
@@ -780,7 +783,7 @@ def match_tracks(ltraj, dist, mininst, minmb, prefname):
         ik=-1
         for tk in ltraj2:
             ik=ik+1
-            print("Track no", ik," : ", tk.__dict__)
+            #print("Track no", ik," : ", tk.__dict__)
             ij=-1
             for tj in ltraj2:
                 ij=ij+1

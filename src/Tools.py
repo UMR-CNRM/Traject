@@ -1114,18 +1114,21 @@ def maskrad(lons,lats,lonc,latc,rad):
 #--------------------------------------------------------------------------#
 def bufferrad(lons,lats,tab1,rad):
     #Returns the matrix tab (x=lons, y=lats) which are inside (tab=1)
-    #or outside (tab=0) the circle of centre (lonc,latc) of radius rad (km)
+    #or outside (tab=0) an extension of tab1 by the radius rad (km)
     ##Input:
     #lons, lats: longitudes and latitudes of the domain on which to compute the mask
     #tab : first guess (0 or 1) around which the radius is extended
-    #rad: distance to apply around the existing zone in tab
+    #rad: distance to apply around the existing zone in tab1
     #Output: tab: array of shape (len(lons), len(lats)), 1 if in the mask, 0 otherwise
 
+    #print("ENTER BUFFERRAD")
     nlat=len(lats)
     nlon=len(lons)
     listseuils=[0.5]
     latlon_proj = "+proj=latlon"
     tab2=tab1
+    reslon=lons[1]-lons[0]
+    reslat=lats[1]-lats[0]
 
     #Find existing contour in tab
     if np.max(tab2) > np.min(tab2):
@@ -1135,13 +1138,21 @@ def bufferrad(lons,lats,tab1,rad):
             polygon=Polygon(p.vertices)
 
             #Projection du polygone en x,y
-            x,y=polygon.centroid.xy
-            lonc=lons[int(max(0,min(y[0],nlon-1)))]
-            latc=lats[int(max(0,min(x[0],nlat-1)))]
+            x0,y0=polygon.centroid.xy
+            x=x0[0]
+            y=x0[0]
+            lonc=lons[int(max(0,min(x,nlon-1)))]
+            latc=lats[int(max(0,min(y,nlat-1)))]
             aeqd_proj = "+proj=aeqd +lat_0="+str(latc)+" +lon_0="+str(lonc)+" +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m"
             proj = pyproj.Transformer.from_crs(pyproj.CRS.from_proj4(latlon_proj),pyproj.CRS.from_string(aeqd_proj))
-            xy_list = [proj.transform( interp(x,int(x),int(x)+1,lons[int(x)],lons[int(x)+1]),
-                interp(y,int(y),int(y)+1,lats[int(y)],lats[int(y)+1])  ) for x,y in p.vertices]
+            #print("debug :",lons, len(lons))
+            #print("debug :",x)
+            #print("debug :",y)
+            #print("debug :",int(x))
+            #print("debug :",int(y))
+            #print("debug :",len(lons),int(x),int(x)+1)
+            xy_list = [proj.transform( interp(x,int(x),int(x)+1,lons[int(x)],lons[int(x)]+reslon),
+                interp(y,int(y),int(y)+1,lats[int(y)],lats[int(y)]+reslat)  ) for x,y in p.vertices]
 
             #Buffer polygon x,y (km)
             xy_pol = Polygon(xy_list).buffer(rad*1000.0).exterior.xy
