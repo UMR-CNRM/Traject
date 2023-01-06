@@ -286,6 +286,9 @@ class inputdef():
             dicin['suite']='olive'
             dicin['experiment']=self.experiment.lower()
 
+        if self.nativefmt in ["grib1mf","grib2mf"]:
+            dicin["nativefmt"] = "grib"
+
         dicts=self.__dict__
 
         if 'member' in dicts.keys():
