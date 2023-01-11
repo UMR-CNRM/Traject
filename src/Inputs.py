@@ -26,9 +26,10 @@ import numpy as np
 import Tools
 
 time_fmt = "%Y%m%d%H"
+grib_default = "grib2mf" #Default value when "grib" is called
 
-os.environ["ECCODES_SAMPLES_PATH"] = ("/home/common/epygram/ext/eccodes/"
-                                      "share/eccodes/samples/")
+#os.environ["ECCODES_SAMPLES_PATH"] = ("/home/common/epygram/ext/eccodes/"
+#                                      "share/eccodes/samples/")
 
 #______________________________________________________________________________
 
@@ -135,10 +136,16 @@ class inputdef():
         return fname
 
     def get_ecdico(self,param):
-        #eccode/epygram dictionary to extract the relevant field
+        #eccode/epygram dictionary to extract the relevant field in grib format
+        #different grib codes are implemented here
+        #The grib format should be declared in inputdef.nativefmt
+
+        gribfmt = self.nativefmt.lower()
+        if gribfmt == "grib":
+            gribfmt = grib_default
 
         #Selection of meteorological parameters
-        if self.nativefmt.lower()=="grib": #Cas du grib2
+        if gribfmt=="grib2mf": #Cas du grib2 a Meteo-France
 
             #Some conventions of parameter names:
             #lower case letters
@@ -191,11 +198,21 @@ class inputdef():
             elif str(param) == 'rr12h':
                 dict = {'discipline':0, 'parameterCategory' : 1, 'parameterNumber' : 65}
             else:
-                print("Parameter " + param + " not implemented in Inputs.py/inputdef/get_ecdico")
+                print("Parameter " + param + " not implemented in Inputs.py/inputdef/get_ecdico under grib2mf format")
+
+        elif gribfmt=="grib1mf": #Cas du grib (version 1) a Meteo-France
+            if str(param) == 'btir':
+                dict = {"indicatorOfParameter":1,'indicatorOfTypeOfLevel':100,'level': 108}
+            elif str(param) == 'rr':
+                dict = {"indicatorOfParameter":150}
+            elif str(param) == 'rr1h':
+                dict = {"indicatorOfParameter":150}
+            elif str(param) == 'rr12h':
+                dict = {"indicatorOfParameter":150}
+            else:
+                print("Parameter " + param + " not implemented in Inputs.py/inputdef/get_ecdico under grib1mf format")
         else:
-
             print("Format " + self.nativefmt + " not implemented in Inputs.py/inputdef/get_ecdico")
-
 
         return dict
 
@@ -268,6 +285,9 @@ class inputdef():
         if not (self.experiment.lower()=="oper" or self.experiment.lower()=="dble"): 
             dicin['suite']='olive'
             dicin['experiment']=self.experiment.lower()
+
+        if self.nativefmt in ["grib1mf","grib2mf"]:
+            dicin["nativefmt"] = "grib"
 
         dicts=self.__dict__
 
@@ -474,7 +494,7 @@ def get_filetype(inputfile):
     filefmt=lname[-1].lower()
 
     if filefmt in ['grib','grib2']:
-        ftype='grib'
+        ftype="grib"
         epytype='GRIB'
     elif filefmt in ['nc','netcdf']:
         filetype='nc'
@@ -507,9 +527,7 @@ def check_file(filename,indf,param,param0):
 
     gook = os.path.exists(filename2)
 
-    epyfmt=indf.nativefmt.upper()
-    if epyfmt=="NC":
-        epyfmt="NETCDF"
+    ftype, epyfmt = get_filetype(filename2)
 
     return gook, filename2, epyfmt
 
@@ -705,7 +723,7 @@ def open_field(filename,inst,indf,param):
         #We assume here that there is only one instant in the grib file ...
         #if it is not the case, some adaptation is required
 
-    elif gook and epyfmt=="NETCDF":
+    elif gook and epyfmt=="netCDF":
 
         f1 = epygram.formats.resource(filename=filename2,openmode="r")
 
