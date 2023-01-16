@@ -256,18 +256,21 @@ def plot_map_line(ltraj, nam, cax, leg, opt, cmap, **kwargs):
         
         if len(lonc)>1:
             cax.plot(lonc,latc,color=lcol[ivi])
-            lname.append(tra.inputdef["member"][1:3])
         elif len(lonc)==1:
             cax.plot(lonc,latc,color=lcol[ivi],marker='x')
-            lname.append(tra.inputdef["member"][1:3])
         else:
             print("WARNING in plot_map_line: nothing to plot...")
-
+        if len(lonc)>0:
+            if "member" in tra.inputdef:
+                lname.append(tra.inputdef["member"][1:3])
+            else:
+                lname.append(tra.name)
+        
     #legend
     if len(leg) > 0:
         lname=leg
 
-    cax.legend(lname,title=nam+' tracks',ncol=3)
+    cax.legend(lname,title=nam+' tracks',ncol=10,loc="best")
     #Traits legende noires a cause de epygram_departments ... a corriger ... voir comment faire un 2e axe?
     
     return
@@ -499,7 +502,16 @@ def draw_departments(ax,epygram_departments):
 def set_dom_limits(ltraj,opt,diag="",diagrad=0.0,dom=[]):
 
     #Computes resolution
-    if diag=="":
+    print(ltraj[0].__dict__)
+    if ltraj[0].inputdef["origin"]=="obs":
+        leng = ltraj[0].inputdef["domain"]["lonmax"] - ltraj[0].inputdef["domain"]["lonmin"]
+        if leng>100.0:
+            res = 1.0
+        elif leng>10.0:
+            res = 0.25
+        else:
+            res = 0.1
+    elif diag=="":
         par = ltraj[0].algodef["specfields"]["track"]
         res = ltraj[0].algodef["parres"][par]
     else:
@@ -507,7 +519,10 @@ def set_dom_limits(ltraj,opt,diag="",diagrad=0.0,dom=[]):
         res = ltraj[0].algodef["parres"][dd.par]
 
     if opt=="std":
-        domtraj=ltraj[0].algodef["domtraj"]
+        if ltraj[0].inputdef["origin"]=="obs":
+            domtraj=ltraj[0].inputdef["domain"]
+        else:
+            domtraj=ltraj[0].algodef["domtraj"]
         lonmin=domtraj["lonmin"]
         lonmax=domtraj["lonmax"]
         latmin=domtraj["latmin"]

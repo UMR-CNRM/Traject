@@ -445,7 +445,7 @@ class Track:
     def tmax(self,dia):
         #Computes the maximum value of the diagnostic along the track
 
-        val = missval
+        val = missval #assumes missval is negative
         for obj in self.traj:
             #print(obj.__dict__[dia][2])
             if obj.__dict__[dia][2] > val:
@@ -453,3 +453,13 @@ class Track:
 
         return val
 
+    def tmin(self,dia):
+        #Computes the minimum value of the diagnostic along the track
+
+        val = 1e10 #assumes missval is negative
+        for obj in self.traj:
+            #print(obj.__dict__[dia][2])
+            if (obj.__dict__[dia][2]>missval) and obj.__dict__[dia][2] < val:
+                val = obj.__dict__[dia][2] 
+
+        return val

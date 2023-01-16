@@ -255,32 +255,38 @@ def plot_boxplot_score(fig, df, diag, pdt, echmax, qmin, qmax, **kwargs) :
     datid = data.loc[data["diag"]==diag.lower()]
     #print(datid["fctime"])
     #print("filter :", datid.loc[datid["fctime"]==0])
-         
+
+    fct=1
+    if diag.lower() not in ["tte","cte","ate"]:
+        fct = Tools.guess_diag(diag,True).plot_fct
+    
     # Boucle sur les différentes échéances
     l_TE = []
     l_nb_parech = []
+    l_ech = []
     ech = 0
     while ech<=echmax:
-  
         datech = datid.loc[datid["fctime"]==int(ech)]
         vals = []
         for mb in lmembers:
-            vals.extend(datech[mb])
-        #print(vals)
+            vals.extend([x*fct for x in datech[mb] if not np.isnan(x)])
         nb_parech=len(vals)/len(lmembers)
         l_TE.append(vals)
+        l_ech.append(ech)
         l_nb_parech.append(nb_parech)
         ech = ech + pdt
 
     #Make plot
-    plt.boxplot(l_TE, medianprops= {'color' : 'b'},whis=[int(qmin),int(qmax)], showfliers=False, **kwargs)
+    plt.boxplot(l_TE, medianprops= {'color' : 'b'},whis=[int(qmin),int(qmax)], showfliers=False)
     ax=plt.gca()
-    ax.set_xticklabels(labels=np.arange(pdt,120+pdt,pdt),rotation=45)
+    ax.set_xticklabels(labels=l_ech,rotation=45)
     ax.set_xlabel("Echéance (en h)")#, ha='left')
+    if "ylim" in kwargs:
+        ax.set_ylim(kwargs["ylim"])
     if diag.lower() in ["tte","cte","ate"]:
         ylab=diag+" (km)"
     else:
-        ylab=Tools.guess_diag(diag,True).nicename+" ("+Tools.guess_diag(diag,True).unit+") : lines"
+        ylab=Tools.guess_diag(diag,True).nicename+" ("+Tools.guess_diag(diag,True).plot_unit+") : lines"
     ax.set_ylabel(ylab)
 
     # ajout de la ligne 0
@@ -288,9 +294,11 @@ def plot_boxplot_score(fig, df, diag, pdt, echmax, qmin, qmax, **kwargs) :
 
     # Ajout de la courbe : nb de cyclones par ech
     ax1=ax.twinx()
-    ax1.plot(l_nb_parech,color='g')#, label="nb cyclone")
+    x_decal = list(range(1,len(l_ech)+1)) #decalage car boxplot commence a 1 ...
+    ax1.plot(x_decal,l_nb_parech,color='g')#, label="nb cyclone")
+    ax1.set_ylim([0,max(l_nb_parech)+10])
     ax1.set_ylabel("Nombre de cyclones")
-
+    
     return
 
 

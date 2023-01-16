@@ -1251,17 +1251,22 @@ class diagdef:
         #Nice name and unit for plotting (to be completed)
         self.nicename = ""
         self.unit = ""
+        self.plot_fct = 1.0
         if self.par[0:2]=="rr":
             dur=self.par[-1]
             t=self.par[2:-1]
             self.nicename = "rainfall "+t+dur
             self.unit = "mm"
+            self.plot_unit = self.unit
         elif self.par=="mslp":
             self.nicename="mslp"
             self.unit = "Pa"
+            self.plot_unit = "hPa"
+            self.plot_fct = 0.01
         elif self.par=="btir":
             self.nicename="IR Brightness Temperature"
             self.unit = "K"
+            self.plot_unit = self.unit
         else:
             print("you may declare nicename and unit in Tools.diagdef()")
 

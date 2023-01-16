@@ -28,7 +28,7 @@ import Inputs, Tools
 import epygram
 
 #Generic variables
-traject_version = 0.81
+traject_version = 0.82
 missval = -9999.0
 time_orig = np.datetime64("1970-01-01T00:00:00")
 time_fmt = "%Y%m%d%H"
@@ -440,7 +440,6 @@ def write_header(traj,algo,indf):
         #indf is already a dictionary
         if indf=={} and "inputdef" in traj.__dict__:
             indf2=Inputs.inputdef()
-            print(traj.inputdef.__dict__)
             indf2.update_input(traj.inputdef.__dict__)
         else:
             indf2=indf
@@ -523,8 +522,12 @@ def read_header(hdict):
             bt=hdict["trajdef"]["basetime"]
         else:
             bt=""
+        if "inputdef" in hdict.keys():
+            indf = hdict["inputdef"]
+        else:
+            indf={}
         if "nameobj" in hdict["trajdef"]:
-            otraj = DefTrack(hdict["trajdef"]["classobj"],name=hdict["trajdef"]["name"],nameobj=hdict["trajdef"]["nameobj"],\
+            otraj = DefTrack(hdict["trajdef"]["classobj"],name=hdict["trajdef"]["name"],nameobj=hdict["trajdef"]["nameobj"],inputdef=indf, \
                         basetime=bt,nobj=0)
         else:
             otraj = DefTrack(hdict["trajdef"]["classobj"],name=hdict["trajdef"]["name"],basetime=bt,nobj=0)
@@ -980,6 +983,9 @@ def ConvertIBTRACS(filename, timetraj , domtraj, diags=[]):
                 for dg in ldiag: #adding diagnostics
                     if len(data_sub1.loc[ind][namediag[dg]])>0 and not data_sub1.loc[ind][namediag[dg]]==' ':
                         setattr(objectm,dg,[missval, missval, float(data_sub1.loc[ind][namediag[dg]])*convfct[namediag[dg]]])
+                        if dg=="mslp_min":
+                            objectm.mslp_min[0]=objectm.lonc
+                            objectm.mslp_min[1]=objectm.latc
                     else:
                         setattr(objectm,dg,[missval, missval, missval])
 
