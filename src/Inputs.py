@@ -21,7 +21,6 @@ import os
 import epygram, json
 import time
 import datetime as dt
-#from datetime import timedelta, datetime
 import numpy as np
 import Tools
 
@@ -457,6 +456,9 @@ class algodef():
 
         #Diagnostic parameters (asked by the user)
         self.diag_parameter={}
+
+        #Parallel options (optional)
+        self.parallel={}
 
         #Special field options (optional, depends on the algorithm)
         self.specfields=None

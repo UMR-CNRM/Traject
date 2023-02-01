@@ -7,6 +7,7 @@
 	"parfilt":{"rv850":100.0,"u850":100.0,"v850":100.0,"u700":100.0,"v700":100.0,"mslp":0},
 	"parres":{"all":0.5},
 	"specfields":{"track":"rv850","pairing":"mslp"},
-	"diag_parameter":["mslp_o","mslp_p"]
+	"diag_parameter":["mslp_o","mslp_p"],
+	"parallel":{"ntasks":2}
 }
 

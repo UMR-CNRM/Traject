@@ -270,7 +270,7 @@ def plot_map_line(ltraj, nam, cax, leg, opt, cmap, **kwargs):
     if len(leg) > 0:
         lname=leg
 
-    cax.legend(lname,title=nam+' tracks',ncol=10,loc="best")
+    cax.legend(lname,title=nam+' tracks',ncol=3,loc="best")
     #Traits legende noires a cause de epygram_departments ... a corriger ... voir comment faire un 2e axe?
     
     return
@@ -338,7 +338,10 @@ def plot_map_dot(ltraj, nam, fig, cax, leg, opt, cmap, lev, **kwargs):
                 col=lcol[np.digitize(pdiag[ivc],lev)-1]
                 cc=cax.plot(lonc[ivc],latc[ivc],'o', color=col)
         #print(ltraj[ivi].inputdef["member"])
-        lname.append(ltraj[ivi].inputdef["member"][1:3])
+        if "member" in ltraj[ivi].inputdef:
+            lname.append(ltraj[ivi].inputdef["member"][1:3])
+        else:
+            lname.append("")
         
     #legend
     if len(leg)>0:
@@ -876,7 +879,7 @@ def get_col(cmap,n):
     if n>1:
         for ivi in range(n):
             lcol.append(mpl.colors.to_hex(gmap(ivi/(n-1)), keep_alpha=True))
-    elif ntraj>0:
+    elif n>0:
         lcol=mpl.colors.to_hex(gmap(0), keep_alpha=True)
         
     return lcol

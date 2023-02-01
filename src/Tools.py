@@ -27,7 +27,7 @@ import Inputs, traject
 #mpl.use('Agg')
 import pyproj
 from shapely.geometry import Point, Polygon
-
+import copy
 
 #--------------------------------------------------------------------------#
 #                              Variables                                   #
@@ -243,12 +243,6 @@ def get_reftraj(linst,domtraj,refnam):
                 if obj.check_dom(domtraj):
                     indom=True
         if chkall and indom:
-            #tra=traject.DefTrack(traki.classobj,name=traki.name)
-            #tra.add_obj(obj)
-            #for ii in range(traki.nobj):
-            #    if datetime.strptime(traki.traj[ii].time,Inputs.time_fmt)>inst:
-            #        tra.add_obj(traki.traj[ii])
-
             lreftraj.append(traki)
 
     return lreftraj
@@ -1411,6 +1405,8 @@ def max_diag(par, traj, indf, dom, res, mintime, maxtime, basetime):
     #basetime : used only for fc case (0 by default) - str format
     #Outputs:
     #val, lon, lat, time of the maximum value
+
+    print("computing max_diag for "+par+" between ",mintime," and ",maxtime)
 
     #Processing inputdef and get list of files and instants
     if isinstance(indf,str):

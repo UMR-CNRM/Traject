@@ -26,9 +26,10 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 import Inputs, Tools
 import epygram
+import concurrent.futures
 
 #Generic variables
-traject_version = 0.82
+traject_version = 0.83
 missval = -9999.0
 time_orig = np.datetime64("1970-01-01T00:00:00")
 time_fmt = "%Y%m%d%H"
@@ -325,7 +326,9 @@ def track(algo,indf,timetraj,**kwargs):
     myalgo_func = getattr(module,"track")
 
     #Initialisation of trajlist
+    outf=[]
     trajlist=[]
+    indfw=[]
 
     if "members" in kwargs and "member" in indf2.__dict__.keys():
         lmb=kwargs['members'] #should be a list of integers
@@ -334,25 +337,43 @@ def track(algo,indf,timetraj,**kwargs):
         lmb=[]
         nmb=1
 
-    indfw=[]
+    #Read reftraj (if any)
+    if "reftraj" in kwargs:
+        nref = kwargs["reftraj"]
+        kwargs.pop("reftraj")
+    else:
+        lref = ["noref"]
+
+    #Parallelization options (only applies on fc)
+    if "ntasks" in algo2.parallel:
+        ntasks = algo2.parallel["ntasks"]
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=ntasks)
+    else:
+        ntasks = 1
 
     if indf2.origin=="fc": #Forecast data is processed: algo is applied on term steps
 
         for basetime in Inputs.comptimes(timetraj): #Loop on timetraj
+            lfile,linst2 = indf2.get_filinst(kwargs["termtraj"],basetime)
+            lref = Tools.get_reftraj(linst2,algo2.domtraj,nref)
 
-            #Loop on members
-            for imb in range(nmb):
+            for reftraj in lref: #Loop on lref
+                #Loop on members
+                for imb in range(nmb):
 
-                if len(lmb)>0: #Several members
-                    mbs=str(lmb[imb]).rjust(3,'0')
-                    indf2.member=mbs
-
-                lfile,linst = indf2.get_filinst(kwargs["termtraj"],basetime)
-                print("Tracking - "+ str(imb) + ", basetime="+basetime)
-                outtraj = myalgo_func(algo2,indf2,linst,lfile,basetime=basetime,**kwargs)
-                trajlist.extend(outtraj)
-                for ivi in range(len(outtraj)):
-                    indfw.append(copy.deepcopy(indf2))
+                    if ntasks==1:
+                        outf.append(track_parallel_fc(myalgo_func,algo2,indf2,basetime,lmb,imb,reftraj,**kwargs))
+                    else:
+                        outf.append(executor.submit(track_parallel_fc,myalgo_func,algo2,indf2,basetime,lmb,imb,reftraj,**kwargs))
+                    
+        for out in outf:
+            if ntasks==1:
+                outtraj, indf3 = out
+            else:
+                outtraj, indf3 = out.result()
+            if len(outtraj)>0:
+                trajlist.append(outtraj[0])
+                indfw.append(indf3)
 
     elif indf2.origin=="an" or self.origin=="cl": #algo is applied on instants
         lfile,linst = indf2.get_filinst(timetraj)
@@ -395,6 +416,19 @@ def track(algo,indf,timetraj,**kwargs):
             Plot(trajlist,domtraj,outputfile=plotfile)
 
     return trajlist
+
+def track_parallel_fc(func,algo,indf,basetime,lmb,imb,reftraj,**kwargs):
+
+    indf3=copy.deepcopy(indf)
+    if len(lmb)>0: #Several members
+        mbs=str(lmb[imb]).rjust(3,'0')
+        indf3.member=mbs
+
+    lfile,linst = indf3.get_filinst(kwargs["termtraj"],basetime)
+    print("Tracking - "+ str(imb) + ", basetime="+basetime)
+    outtraj = func(algo,indf3,linst,lfile,basetime=basetime,reftraj=[reftraj],**kwargs)
+
+    return outtraj, indf3
 
 def Plot(ltraj,dom,outputfile="out.png"):
     #Plots on a single figure the tracks that are
