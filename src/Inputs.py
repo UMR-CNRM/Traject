@@ -542,6 +542,7 @@ def get_paramnc(indf,param,lev):
             param2=par[1]
         elif par[0]==param:
             param2=par[1]
+    #print("get_paramnc",param,param2,lev)
 
     return param2
 
@@ -571,6 +572,9 @@ def split_param(param):
     elif param[0:1]=="v":
         par="v"
         lev=param[1:4]
+    elif param[0:5]=="fgust":
+        par="fgust"
+        lev=param[5:7]
     elif param[0:2]=="ff":
         par="ff"
         lev=param[2:5]
