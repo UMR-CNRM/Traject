@@ -447,9 +447,11 @@ class Track:
 
         val = missval #assumes missval is negative
         for obj in self.traj:
-            #print(obj.__dict__[dia][2])
-            if obj.__dict__[dia][2] > val:
-                val = obj.__dict__[dia][2] 
+            vect=obj.__dict__[dia]
+            nd=int(len(vect)/3)
+            for ivi in range(nd):
+                if vect[3*ivi+2] > val:
+                    val = vect[3*ivi+2] 
 
         return val
 
@@ -458,8 +460,10 @@ class Track:
 
         val = 1e10 #assumes missval is negative
         for obj in self.traj:
-            #print(obj.__dict__[dia][2])
-            if (obj.__dict__[dia][2]>missval) and obj.__dict__[dia][2] < val:
-                val = obj.__dict__[dia][2] 
+            vect=obj.__dict__[dia]
+            nd=int(len(vect)/3)
+            for ivi in range(nd):
+                if (vect[3*ivi+2]>missval) and vect[3*ivi+2] < val:
+                    val = vect[3*ivi+2] 
 
         return val

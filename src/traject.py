@@ -361,9 +361,9 @@ def track(algo,indf,timetraj,**kwargs):
                 #Loop on members
                 for imb in range(nmb):
 
-                    if ntasks==1:
+                    if ntasks==1: #No parallelisation
                         outf.append(track_parallel_fc(myalgo_func,algo2,indf2,basetime,lmb,imb,reftraj,**kwargs))
-                    else:
+                    else: #Parallelisation
                         outf.append(executor.submit(track_parallel_fc,myalgo_func,algo2,indf2,basetime,lmb,imb,reftraj,**kwargs))
                     
         for out in outf:
@@ -376,6 +376,7 @@ def track(algo,indf,timetraj,**kwargs):
                 indfw.append(indf3)
 
     elif indf2.origin=="an" or self.origin=="cl": #algo is applied on instants
+        #No parallelization
         lfile,linst = indf2.get_filinst(timetraj)
         outtraj = myalgo_func(algo2,indf2,linst,lfile,**kwargs)
         trajlist.extend(outtraj)
@@ -939,7 +940,7 @@ def match_tracks(ltraj, dist, mininst, minmb, prefname):
 
 def ConvertIBTRACS(filename, timetraj , domtraj, diags=[]):
     #Converts a IBTRaCS input file to a list of trajectories
-    #Has been tested for last3years csv file
+    #Has been tested for last3years csv file : https://www.ncei.noaa.gov/data/international-best-track-archive-for-climate-stewardship-ibtracs/v04r00/access/csv/ibtracs.last3years.list.v04r00.csv
     #Inputs : IBTRaCS filename
     #timetraj : valid times of the output tracks (only 'start' and 'final' are used)
     #domtraj : domain of the output tracks (lonmin must be < lonmax)
