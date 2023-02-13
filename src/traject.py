@@ -26,24 +26,13 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 import Inputs, Tools
 import epygram
+import concurrent.futures
 
 #Generic variables
-traject_version = 0.82
+traject_version = 0.83
 missval = -9999.0
 time_orig = np.datetime64("1970-01-01T00:00:00")
 time_fmt = "%Y%m%d%H"
-
-#Epygram environment
-#epygram.init_env()
-#os.environ["ECCODES_SAMPLES_PATH"] = ("/home/common/epygram/ext/eccodes/"
-
-#la création d'un dictionnaire qui contient tous les objets possible
-#Exemple: "EXC" est le nom du module
-#------et "Extratropical_Cyclone" est le nom de l'objet.
-obj_modules = {"Tropical_Cyclone": "CYC",
-               "Extratropical_Cyclone": "CYC",
-               "CYC": "CYC",
-               "unknown":"CYC"}
 
 def DefObject(classobj, ldiag, ltrap, **kwargs):
     '''Function to import the class of meteorological object that is needed by the user
@@ -55,7 +44,6 @@ def DefObject(classobj, ldiag, ltrap, **kwargs):
     '''
 
     #L'importation du module convenable
-    #module = __import__("OBJ_"+obj_modules[classobj])
     module = __import__("OBJ_"+classobj)
 
     #Définition des classes qu'on veut utiliser
@@ -325,7 +313,9 @@ def track(algo,indf,timetraj,**kwargs):
     myalgo_func = getattr(module,"track")
 
     #Initialisation of trajlist
+    outf=[]
     trajlist=[]
+    indfw=[]
 
     if "members" in kwargs and "member" in indf2.__dict__.keys():
         lmb=kwargs['members'] #should be a list of integers
@@ -334,27 +324,46 @@ def track(algo,indf,timetraj,**kwargs):
         lmb=[]
         nmb=1
 
-    indfw=[]
+    #Read reftraj (if any)
+    if "reftraj" in kwargs:
+        nref = kwargs["reftraj"]
+        kwargs.pop("reftraj")
+    else:
+        lref = ["noref"]
+
+    #Parallelization options (only applies on fc)
+    if "ntasks" in algo2.parallel:
+        ntasks = algo2.parallel["ntasks"]
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=ntasks)
+    else:
+        ntasks = 1
 
     if indf2.origin=="fc": #Forecast data is processed: algo is applied on term steps
 
         for basetime in Inputs.comptimes(timetraj): #Loop on timetraj
+            lfile,linst2 = indf2.get_filinst(kwargs["termtraj"],basetime)
+            lref = Tools.get_reftraj(linst2,algo2.domtraj,nref)
 
-            #Loop on members
-            for imb in range(nmb):
+            for reftraj in lref: #Loop on lref
+                #Loop on members
+                for imb in range(nmb):
 
-                if len(lmb)>0: #Several members
-                    mbs=str(lmb[imb]).rjust(3,'0')
-                    indf2.member=mbs
-
-                lfile,linst = indf2.get_filinst(kwargs["termtraj"],basetime)
-                print("Tracking - "+ str(imb) + ", basetime="+basetime)
-                outtraj = myalgo_func(algo2,indf2,linst,lfile,basetime=basetime,**kwargs)
-                trajlist.extend(outtraj)
-                for ivi in range(len(outtraj)):
-                    indfw.append(copy.deepcopy(indf2))
+                    if ntasks==1: #No parallelisation
+                        outf.append(track_parallel_fc(myalgo_func,algo2,indf2,basetime,lmb,imb,reftraj,**kwargs))
+                    else: #Parallelisation
+                        outf.append(executor.submit(track_parallel_fc,myalgo_func,algo2,indf2,basetime,lmb,imb,reftraj,**kwargs))
+                    
+        for out in outf:
+            if ntasks==1:
+                outtraj, indf3 = out
+            else:
+                outtraj, indf3 = out.result()
+            if len(outtraj)>0:
+                trajlist.append(outtraj[0])
+                indfw.append(indf3)
 
     elif indf2.origin=="an" or self.origin=="cl": #algo is applied on instants
+        #No parallelization
         lfile,linst = indf2.get_filinst(timetraj)
         outtraj = myalgo_func(algo2,indf2,linst,lfile,**kwargs)
         trajlist.extend(outtraj)
@@ -395,6 +404,19 @@ def track(algo,indf,timetraj,**kwargs):
             Plot(trajlist,domtraj,outputfile=plotfile)
 
     return trajlist
+
+def track_parallel_fc(func,algo,indf,basetime,lmb,imb,reftraj,**kwargs):
+
+    indf3=copy.deepcopy(indf)
+    if len(lmb)>0: #Several members
+        mbs=str(lmb[imb]).rjust(3,'0')
+        indf3.member=mbs
+
+    lfile,linst = indf3.get_filinst(kwargs["termtraj"],basetime)
+    print("Tracking - "+ str(imb) + ", basetime="+basetime)
+    outtraj = func(algo,indf3,linst,lfile,basetime=basetime,reftraj=[reftraj],**kwargs)
+
+    return outtraj, indf3
 
 def Plot(ltraj,dom,outputfile="out.png"):
     #Plots on a single figure the tracks that are
@@ -905,7 +927,7 @@ def match_tracks(ltraj, dist, mininst, minmb, prefname):
 
 def ConvertIBTRACS(filename, timetraj , domtraj, diags=[]):
     #Converts a IBTRaCS input file to a list of trajectories
-    #Has been tested for last3years csv file
+    #Has been tested for last3years csv file : https://www.ncei.noaa.gov/data/international-best-track-archive-for-climate-stewardship-ibtracs/v04r00/access/csv/ibtracs.last3years.list.v04r00.csv
     #Inputs : IBTRaCS filename
     #timetraj : valid times of the output tracks (only 'start' and 'final' are used)
     #domtraj : domain of the output tracks (lonmin must be < lonmax)

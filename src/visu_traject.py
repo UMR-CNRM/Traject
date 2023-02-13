@@ -191,7 +191,7 @@ def map_plot(ltraj, diag, typeplot="line", leg=[], opt = "std", fig={}, filename
     #typeplot:, #can be “line” (default),  “dot” or “strike”
     #fig = figure name and axis on which to plot (optional input, default is {})
     #leg=[], #legend for every track (if default, use member number) if relevant (“line” or “dot”),
-    #colorlevels:[] # thresholds for different colors (default is []), valid if typeplot=“dot” or “strike”
+    #colorlevels:[] # thresholds for different colors (default is []) if typeplot=“dot”, or scale of probabilistic values if typeplot="“strike”
     #colormap=, #colormap (used for leg, default is “viridis”)
     #diagthr=0.0, #threshold on diag to take into account the object in the plot,
     #diagrad=0.0, #radius (km) to add around the diagnostic
@@ -217,7 +217,7 @@ def map_plot(ltraj, diag, typeplot="line", leg=[], opt = "std", fig={}, filename
     elif typeplot=="dot":
         plot_map_dot(ltraj, diag, fig, cax, leg, opt, colormap, colorlevels, **kwargs)
     elif typeplot=="strike":
-        plot_map_strike(ltraj, diag, diagrad, diagthr, centre, cax, leg, opt, colormap, colorlevels, dom, **kwargs)
+        plot_map_strike(ltraj, diag, fig, diagrad, diagthr, centre, cax, leg, opt, colormap, colorlevels, dom, **kwargs)
     else:
         print("Wrong typeplot option in time_plot() : typeplot=",typeplot)
         exit()
@@ -270,7 +270,7 @@ def plot_map_line(ltraj, nam, cax, leg, opt, cmap, **kwargs):
     if len(leg) > 0:
         lname=leg
 
-    cax.legend(lname,title=nam+' tracks',ncol=10,loc="best")
+    cax.legend(lname,title=nam+' tracks',ncol=3,loc="best")
     #Traits legende noires a cause de epygram_departments ... a corriger ... voir comment faire un 2e axe?
     
     return
@@ -338,7 +338,10 @@ def plot_map_dot(ltraj, nam, fig, cax, leg, opt, cmap, lev, **kwargs):
                 col=lcol[np.digitize(pdiag[ivc],lev)-1]
                 cc=cax.plot(lonc[ivc],latc[ivc],'o', color=col)
         #print(ltraj[ivi].inputdef["member"])
-        lname.append(ltraj[ivi].inputdef["member"][1:3])
+        if "member" in ltraj[ivi].inputdef:
+            lname.append(ltraj[ivi].inputdef["member"][1:3])
+        else:
+            lname.append("")
         
     #legend
     if len(leg)>0:
@@ -360,14 +363,13 @@ def plot_map_dot(ltraj, nam, fig, cax, leg, opt, cmap, lev, **kwargs):
         cax.set_ylabel(dia.nicename+" ("+dia.unit+") : dots")    
     return
 
-def plot_map_strike(ltraj, diag, diagrad, diagthr, centre, cax, leg, opt, colormap, colorlevels, dom, **kwargs):
+def plot_map_strike(ltraj, diag, fig, diagrad, diagthr, centre, cax, leg, opt, colormap, colorlevels, dom, **kwargs):
     #Plots strike probabilities 
-    #(called by map_plot()
+    #(called by map_plot())
 
     #computation of strike (use of object masks)
     lonmin,lonmax,latmin,latmax,res = set_dom_limits(ltraj,opt,diag=diag,diagrad=diagrad,dom=dom)
     images, N_obj, lons, lats = init_strike(ltraj,[lonmin,lonmax,latmin,latmax],res)
-    #print(images.shape)
     ivi=0
     for traj in ltraj:
         for obj in traj.traj:
@@ -376,15 +378,27 @@ def plot_map_strike(ltraj, diag, diagrad, diagthr, centre, cax, leg, opt, colorm
     images[images > 0] = 1
     
     summed_img = np.sum(images, axis=0)
-    imax = np.max(summed_img)
-    if imax>0:
-        summed_img = summed_img / imax
+    imax = np.max(summed_img) #Normalisation 1
+
     if colorlevels==[]:
-        col=10
+        maxc=1.0
     else:
-        col=colorlevels
+        maxc=max(colorlevels)
+
+    nlev=10
+    col=[ivi/nlev for ivi in range(nlev+1)]
+
+    if imax>0:
+        summed_img = summed_img / imax * maxc
     
-    plt.contourf(lons,lats,summed_img,col,cmap=colormap,transform=ccrs.PlateCarree())
+    gmap = mpl.cm.get_cmap(name=colormap,lut=nlev)
+    plt.contourf(lons,lats,summed_img,col,cmap=gmap,transform=ccrs.PlateCarree())
+    cba = fig.add_axes([0.85, 0.2, 0.02, 0.6])
+    cb1 = mpl.colorbar.ColorbarBase(cba,cmap=gmap,orientation='vertical')
+    cb1.set_ticks(col)
+    cb1.set_ticklabels([str(col[ivi]*100.0)+"%" for ivi in range(len(col))])
+    if not diag=="":
+        cb1.set_label("Strike probability - " + Tools.guess_diag(diag,True).nicename+" > "+str(int(diagthr))+Tools.guess_diag(diag,True).unit+" + Neighbour "+str(int(diagrad))+"km")
 
     return
 
@@ -876,7 +890,7 @@ def get_col(cmap,n):
     if n>1:
         for ivi in range(n):
             lcol.append(mpl.colors.to_hex(gmap(ivi/(n-1)), keep_alpha=True))
-    elif ntraj>0:
+    elif n>0:
         lcol=mpl.colors.to_hex(gmap(0), keep_alpha=True)
         
     return lcol
