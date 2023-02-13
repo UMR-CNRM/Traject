@@ -13,7 +13,9 @@ Dependencies
 ------------
 
 Traject is compatible with Python3.
-Traject depends on the open-source library EPyGrAM (https://github.com/UMR-CNRM/EPyGrAM/) for the manipulation of meteorological model fields and formats. EPyGrAM must be installed to run Traject. Other dependancies are generic Python modules that can be installed by pip.
+Traject depends on the open-source library EPyGrAM (https://github.com/UMR-CNRM/EPyGrAM/) for the manipulation of meteorological model fields and formats. EPyGrAM must be installed to run Traject, which requires also to install Bronx (https://github.com/UMR-CNRM/bronx) and footprint (https://github.com/UMR-CNRM/footprint).
+
+Other dependancies are generic Python modules that can be installed by pip.
 
 Installation
 ------------
@@ -22,7 +24,9 @@ To install Traject, put the content of the src/ directory in a directory that is
 Tests
 -----
 
-Several test cases are available in the test_cases/ directory. If needed to run the tests, input data is available on demand from the code owner.
+Several test cases are available in the test_cases/ directory.
+If needed to run the tests, input data is available on demand from the code owner.
+To run the tests, edit and update the "directory" field in the files test_cases/indef_testcase?.json.
 
 Documentation
 -------------
