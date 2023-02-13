@@ -312,7 +312,7 @@ class inputdef():
 
                 rhs=vortex.toolbox.input(dicin)
                 rhs[0].get()
-                print(os.environ["MTOOLDIR"]+'cache/vortex'+rhs[0].uridata['path'])
+                #print(os.environ["MTOOLDIR"]+'cache/vortex'+rhs[0].uridata['path'])
                 if 'member' in dicin.keys():
                     self.directory=os.environ["MTOOLDIR"]+'cache/vortex/'+dicin['model']+'/'+dicin['vconf']+ \
                               '/'+self.experiment.upper()+'/[YYYYMMDD]T[HH]00P/mb[member]/forecast/'
@@ -320,83 +320,6 @@ class inputdef():
                     self.directory=os.environ["MTOOLDIR"]+'cache/vortex/'+dicin['model']+'/'+dicin['vconf']+ \
                               '/'+self.experiment.upper()+'/[YYYYMMDD]T[HH]00P/forecast/'
                 self.filename='grid.'+dicin['model'].lower()+'-forecast.'+dicin['geometry'].lower()+'+[term:4]:00.grib'
-
-        return
-
-    def check_vortex(self,timetraj,**kwargs):
-        #Check if the files needed by the algorithm are present
-        #and, if not, download them on a local space using vortex
-        #Old ... to be kept??
-
-        import vortex, olive 
-
-        lfile,linst = self.get_filinst(timetraj,**kwargs)
-
-        #Generate the dictionary of the vortex resource
-        dicin={'namespace':'vortex.multi.fr', #Default
-                    'block':'forecast',
-                    'vapp':self.model,
-                    'vconf':'4dvarfr',
-                    'cutoff':'assim',
-                    'origin':'historic',
-                    'kind':"gridpoint",
-                    'nativefmt':self.nativefmt,
-                    'model':self.model,
-                    'suite':self.experiment.lower(),
-                    'geometry':self.domain,
-                    'date':dt.datetime.strftime(linst[0],format=time_fmt),
-                    'term':'00',
-                    'shouldfly':True,
-                    'fatal':True
-                      }
-
-        if self.model=="arome":
-            dicin['vconf'] = '3dvarfr'
-        if self.origin=="fc":
-            dicin['cutoff'] = 'production'
-        if not (self.experiment.lower()=="oper" or self.experiment.lower()=="dble"): 
-            dicin['suite']='olive'
-            dicin['experiment']=self.experiment.lower()
-
-        dicts=self.__dict__
-
-        if 'member' in dicts.keys():
-            dicin['member'] = dicts['member']
-            if self.model=="arpege":
-                dicin['vconf'] = 'pearp'
-            elif self.model=="arome":
-                dicin['vconf'] = 'pefrance'
-
-        #list of files required
-        for nf in range(len(lfile)):
-            #lfile2 : modifié par repvortex
-
-            if not os.path.exists(lfile[nf]):
-                #then we should download the file with Vortex
-
-                if self.origin=="an":
-                    YYYYMMDDHH=dt.datetime.strftime(linst[nf],format=time_fmt)
-                    dicin['date']=YYYYMMDDHH+'00'
-                else:
-                    YYYYMMDDHH=dt.datetime.strftime(linst[0],format=time_fmt)
-                    fterm=int((linst[nf]-linst[0]).days*24+((linst[nf]-linst[0]).seconds)/3600)
-                    dicin['term']=str(fterm).rjust(2,'0')
-
-                rhs=vortex.toolbox.input(dicin)
-                rhs[0].get()
-
-
-            if not os.path.exists(lfile[nf]):
-                print("Something wrong with your inputdef file to be compliant with vortex:")
-                print("More details:")
-                print("The requested file is: "+lfile[nf])
-                print("The vortex resource is:"+os.environ["MTOOLDIR"]+'cache/vortex'+rhs[0].uridata['path'])
-                print("They should be the same. Potential shorcomings are:")
-                print("    - The vortex directory in your inputdef.json file should include the vortex path (=$MTOOLDIR="+os.environ["MTOOLDIR"]+")")
-                print("    - A key has not been properly implemented in Inputs.check_vortex() function")
-                print(" --- ABORT --- ")
-                print(" ------------- ")
-                exit()
 
         return
 
@@ -855,9 +778,6 @@ def extract_data(filename,inst,indf,param,domtraj,res,basetime,filtrad=0):
         else:
             filtrad2 = res*100.0 #we apply an equivalent radius to the new grid
             ngb = int((res/res0)*(res/res0)*(filtrad2/(res*100))*(filtrad2/(res*100))*4)+1
-            print("Apply equivalent filtering of "+str(filtrad2)+"km")
-        print("Number of neighbouring points:" + str(ngb) + " for filtering at " + str(filtrad2) +\
-                "km from resolution " +str(res0) + " to resolution " +str(res) )
         fld=fs.resample_on_regularll({"lonmin":domtraj["lonmin"],"latmin":domtraj["latmin"],
         "lonmax":domtraj["lonmax"],"latmax":domtraj["latmax"]},res,weighting='gauss',
                 radius_of_influence=filtrad2*1e3,neighbours=ngb,sigma=(filtrad2/2.0)*1e3, reduce_data=True)

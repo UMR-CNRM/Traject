@@ -89,7 +89,6 @@ def init_algo(algo,indf,linst,lfile,**kwargs):
         else:
             diag=diagdef(diagname,Hn,ss,rd)
             ldiag.append(diag)
-            #print(diagname, diag.__dict__)
 
     return domtraj, dres, deltat, Hn, ldiag
 
@@ -102,8 +101,6 @@ def get_parres(algo,indf,file1,inst1):
     dres={}
     lpar=[k for k in algo.parfilt] #list of required variables
     reskeys=[k for k in algo.parres]
-    #print(lpar)
-    #print(reskeys)
 
     if reskeys[0]=="all": #then all fields apply the same rule
         if algo.parres["all"]<1e-6:
@@ -192,7 +189,6 @@ def check_filtapply(algo,indf,linst,lfile,dres):
     if "filtered" in indf.__dict__.keys():
         for par in lpar:
             if par in indf.filtered.keys():
-                #print(indf.filtered[par])
                 infilt[par]=indf.filtered[par]
             else:
                 infilt[par]=0
@@ -201,10 +197,8 @@ def check_filtapply(algo,indf,linst,lfile,dres):
             infilt[par]=0
 
     for par in lpar:
-        #print(par)
         domtraj, res, lons, lats = Inputs.extract_domain(lfile[0],linst[0],indf,par)
         checkres = checkres and abs(dres[par]-res)<1e-6
-        #print(checkres,dres[par],res)
 
     #check filters (between indf and algo)
     checkfilt=True
@@ -364,15 +358,11 @@ def get_dom_limits(ltraj, diag, res):
                     llat.append(obj.__dict__[diag][1])
 
     #Compute length of grid and grid boundaries
-    #print(llon)
-    #print(llat)
     dyy = comp_length(np.mean(llon),np.mean(llat),np.mean(llon),np.mean(llat)+res)
     lonmin = res * int( (min(llon)/res ) )
     lonmax = res * int( (max(llon)/res ) ) + res
     latmin = res * int( (min(llat)/res ) )
     latmax = res * int( (max(llat)/res ) ) + res
-    #print(min(llon),lonmin, max(llon), lonmax)
-    #print(min(llat),latmin, max(llat), latmax)
 
     return {"lonmin":lonmin,"lonmax":lonmax,"latmin":latmin,"latmax":latmax}
 
@@ -403,10 +393,6 @@ def comp_steering(lon,lat,steering_levels,filin,inst,indf,res,domtraj,basetime,p
         tlon = [lon]
         tlat = [lat]
 
-    #Get the origin grid of filin
-    #domtot, lons, lats = Inputs.extract_domain(filin,inst,indf,"u"+str(steering_levels[0])) 
-    #res=domtot["res"]
-    #print(domtot)
     #Extraction of total steering field
     lev=steering_levels[0]
     if nlev==1 and lev<1e-6: #valeur nulle
@@ -488,10 +474,10 @@ def adv_quality(trackpar, AVOr, obj1, obj2, res, pdmin):
     
     # Calcul de la qualité
     quality = max(0.0,(dyy/(dyy + err) -pdmin)/ (1-pdmin))
-    print("SEUIL DISTANCE :",(dyy*(1-pdmin)/pdmin),"(pdmin=",pdmin,", dy=",dyy,")")
-    print("adv_quality: ", quality, "(",d2, d3, -d4, -d1, err ,")")
-    if quality > 0.0:
-        print("adv quality:",quality)
+    #print("SEUIL DISTANCE :",(dyy*(1-pdmin)/pdmin),"(pdmin=",pdmin,", dy=",dyy,")")
+    #print("adv_quality: ", quality, "(",d2, d3, -d4, -d1, err ,")")
+    #if quality > 0.0:
+        #print("adv quality:",quality)
         #print([d2,d3,-d1,-d4])
 
     return quality
@@ -523,8 +509,8 @@ def avo_quality(trackpar,obj1,obj2, pvmin):
     # Calcul de la qualité
     quality = max(0,(var -pvmin)/(1 -pvmin))
 
-    if quality > 0.0:
-        print("avo quality:",quality)
+    #if quality > 0.0:
+    #    print("avo quality:",quality)
         
     return quality
 
@@ -641,21 +627,12 @@ def find_allmin(fld,dist=maxval,thr=0.0):
     for ivj in range(np.shape(indexf)[1]):
         lon,lat = fld.geometry.ij2ll(indexf[1][ivj],indexf[0][ivj])
         val = fld.getvalue_ll(lon,lat)
-        #print('---------------')
-        #print("Essai ajout du Point ",lon,lat)
-        #print("      Valeur ",val," a comparer a ",thr)
-        #print("Dans les tableaux :")
-        #print(tlon)
-        #print(tlat)
-        #print(tval)
-        #print('---------------')
 
         if val<thr:
 
             if (dist<maxval-1):
                 indc=[] #list of indices that are in the radius
                 for ivi in range(len(tlat)):
-                    #print("Distances avec le point:",ivi," = ",comp_length(lon,lat,tlon[ivi],tlat[ivi]))
                     if comp_length(lon,lat,tlon[ivi],tlat[ivi])<dist:
                         indc.append(ivi)
                     #indc: liste des indices qui sont dans le rayon dist
@@ -669,12 +646,10 @@ def find_allmin(fld,dist=maxval,thr=0.0):
                             imax = indc[ivi]
                             vmax = abs(tval[indc[ivi]])
                     #vmax, imax: valeur maximal
-                    #print("Max val:", imax,vmax,indc)
 
                     if imax==-1: #le max est le nouveau - on supprime les valeurs dans indc
                         nsup=len(indc)
                         for ivi in range(nsup-1,-1,-1):
-                            #print("Supprime ", tlat[indc[ivi]], tlon[indc[ivi]], tval[indc[ivi]])
                             del tlat[indc[ivi]]
                             del tlon[indc[ivi]]
                             del tval[indc[ivi]]
@@ -684,7 +659,6 @@ def find_allmin(fld,dist=maxval,thr=0.0):
                     #else: (imax>=0) # le max est deja existant - on ajoute rien
 
                 else: #len(indc>0) : pas de max detecte dans le rayon
-                    #print("Pas de conflit dans ce rayon")
                     tlat.append(lat)
                     tlon.append(lon)
                     tval.append(val)
@@ -693,18 +667,6 @@ def find_allmin(fld,dist=maxval,thr=0.0):
                 tlat.append(lat)
                 tlon.append(lon)
                 tval.append(val)
-
-        #CHECK
-        #for ivk in range(len(tlat)):
-        #    for ivl in range(len(tlat)):
-        #        if (comp_length(tlon[ivk],tlat[ivk],tlon[ivl],tlat[ivl]) < dist):
-        #            if not(ivk==ivl):
-        #                print(tlon)
-        #                print(tlat)
-        #                print(tval)
-        #                print(comp_length(tlon[ivk],tlat[ivk],tlon[ivl],tlat[ivl]))
-        #                print(ivk,ivl,tlon[ivk],tlat[ivk],tlon[ivl],tlat[ivl])
-        #                exit()
 
     return tlon,tlat,tval
 
@@ -811,22 +773,14 @@ def find_amin(fld, lon0 ,lat0 ,ss=0 , thr=maxval ):
         jmin=max(1,pts[0][1]-maxsizeY)
         jmax=min(pts[3][1]+maxsizeY,Y-1)
         tab=fld.data[jmin:jmax,imin:imax]
-        #print("Total size:",X,Y)
-        #print("tab definition")
-        #print(maxsize, tab.shape)
-        #print(imin,imax,jmin,jmax)
-        #print("pts:",pts[0][0],pts[2][0],pts[0][1],pts[3][1])
 
         valmin = np.amin(tab,axis=None)
         indexf = np.unravel_index(np.argmin(tab,axis=None), tab.shape)
-        #print("indexf", indexf)
-        #print(indexf[0]+imin,indexf[1]+jmin)
         
         if np.size(indexf) > 0: #Finds the local minimum with lower value
             lon,lat = fld.geometry.ij2ll(indexf[1]+imin,indexf[0]+jmin)
             dist=comp_length(lon0,lat0,lon,lat)
             val = fld.getvalue_ll(lon,lat)
-            #print("Potential min :",val, thr)
             if (val<thr):
                 gook=True
                 dmin=dist
@@ -854,10 +808,6 @@ def find_locmin(fld, lon0 ,lat0 ,ss=0 , thr=maxval ):
     #Dimensions of fld
     X = fld.geometry.dimensions['X']
     Y = fld.geometry.dimensions['Y']
-    #lon_g,lat_g=fld.geometry.get_lonlat_grid()
-    #llc=fld.geometry.gimme_corners_ll()
-    #print(llc)
-    #exit()
 
     res=get_res(fld)
 
@@ -905,7 +855,6 @@ def find_locmin(fld, lon0 ,lat0 ,ss=0 , thr=maxval ):
                     lon,lat = fld.geometry.ij2ll(indexf[1][ivj]+imin,indexf[0][ivj]+jmin)
                     dist=comp_length(lon0,lat0,lon,lat)
                     val = fld.getvalue_ll(lon,lat)
-                    #print("Potential min :",val, thr)
                     if (val<thr) and (dist<dmin):
                         dmin=dist
                         valmin=val
@@ -971,10 +920,8 @@ def find_locextr(sign, fld, lon0, lat0, ss=0, thr=maxval):
     #Finds the closest local max if sign=1, min if sign=-1, respectively
     
     if sign==-1:
-        #print("min")
         lon1, lat1, valmin, dmin, gook = find_locmin(fld,lon0,lat0,ss=ss,thr=thr)
     elif sign==1:
-        #print("max")
         lon1, lat1, valmin, dmin, gook = find_locmax(fld,lon0,lat0,ss=ss,thr=thr)
     else:
         print('Error in Tools.find_locextr: wrong sign (should be -1 or 1)')
@@ -987,10 +934,8 @@ def find_aextr(sign, fld, lon0, lat0, ss=0, thr=maxval):
     #which value is above thr and with the highest value
     
     if sign==-1:
-        #print("min")
         lon1, lat1, valmin, dmin, gook = find_amin(fld,lon0,lat0,ss=ss,thr=thr)
     elif sign==1:
-        #print("max")
         lon1, lat1, valmin, dmin, gook = find_amax(fld,lon0,lat0,ss=ss,thr=thr)
     else:
         print('Error in Tools.find_extr: wrong sign (should be -1 or 1)')
@@ -1017,9 +962,6 @@ def smooth_min(fld,glon,glat):
     s1 = pmA+pmD-2*pm
     s2 = pmB+pmC-2*pm
 
-    #print("smooth_min : ",res, glon, glat, pm, pmA, pmB, pmC, pmD)
-    #print("smooth_min : ",d1, d2, s1, s2)
-
     if not s1*s2==0:
         lon = glon - 0.5*res*d1/s1
         lat = glat - 0.5*res*d2/s2
@@ -1028,25 +970,6 @@ def smooth_min(fld,glon,glat):
         lon = glon
         lat = glat
         val = pm
-
-    #checks
-    #interp="linear"
-    #print("Output value of smooth_min: ", lon, lat, val)
-    #lon1=lon-res/10
-    #pm1 = fld.getvalue_ll(lon1,lat,interpolation=interp)
-    #print("First value around: ", lon1, lat, pm1)
-    #lon2=lon+res/10
-    #pm2 = fld.getvalue_ll(lon2,lat,interpolation=interp)
-    #print("Second value around: ", lon1, lat, pm2)
-    #lat1=lat-res/10
-    #pm3 = fld.getvalue_ll(lon,lat1,interpolation=interp)
-    #print("Third value around: ", lon, lat1, pm3)
-    #lat2=lat+res/10
-    #pm4 = fld.getvalue_ll(lon,lat2,interpolation=interp)
-    #print("Fourth value around: ", lon, lat2, pm4)
-    #if pm1<val or pm2<val or pm3<val or pm4<val:
-    #    print("There is a problem in Tools.smooth_min - abort")
-    #    exit()
 
     return lon, lat, val
 
@@ -1098,9 +1021,7 @@ def maskrad(lons,lats,lonc,latc,rad):
     tab = np.zeros((nlat,nlon),dtype=int)
     for ivx in range(nlon):
         for ivy in range(nlat):
-            #print(Point(ivx,ivy))
             if pol.contains(Point(lons[ivx],lats[ivy])):
-                #print(lons[ivx],lats[ivy]," inside")
                 tab[ivy,ivx] = 1
 
     return tab
@@ -1115,7 +1036,6 @@ def bufferrad(lons,lats,tab1,rad):
     #rad: distance to apply around the existing zone in tab1
     #Output: tab: array of shape (len(lons), len(lats)), 1 if in the mask, 0 otherwise
 
-    #print("ENTER BUFFERRAD")
     nlat=len(lats)
     nlon=len(lons)
     listseuils=[0.5]
@@ -1139,12 +1059,6 @@ def bufferrad(lons,lats,tab1,rad):
             latc=lats[int(max(0,min(y,nlat-1)))]
             aeqd_proj = "+proj=aeqd +lat_0="+str(latc)+" +lon_0="+str(lonc)+" +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m"
             proj = pyproj.Transformer.from_crs(pyproj.CRS.from_proj4(latlon_proj),pyproj.CRS.from_string(aeqd_proj))
-            #print("debug :",lons, len(lons))
-            #print("debug :",x)
-            #print("debug :",y)
-            #print("debug :",int(x))
-            #print("debug :",int(y))
-            #print("debug :",len(lons),int(x),int(x)+1)
             xy_list = [proj.transform( interp(x,int(x),int(x)+1,lons[int(x)],lons[int(x)]+reslon),
                 interp(y,int(y),int(y)+1,lats[int(y)],lats[int(y)]+reslat)  ) for x,y in p.vertices]
 
@@ -1183,7 +1097,6 @@ class diagdef:
         #If ds has the format PARAMETER_AREA, then Hn is required to guess KIND
 
         ds2=ds.split("_")
-        #print(ds)
         
         if len(ds2)==1: #only parameter ...
             par, sign = get_parsign(ds2[0], Hn)
@@ -1292,10 +1205,7 @@ def guess_diag(strdiag,Hn):
 def make_diags(ldiag,obj,ss,rd,filin,inst,indf,domtraj,Hn,res,basetime,olon,olat,**kwargs):
     #olon, olat: origin points (tracking parameter)
 
-    #print("Make diag",ldiag," on "+filin)
-
     for diag in ldiag:
-        #print(diag.__dict__)
         obj.diags.append(diag.strg)
         if "parfilt" in kwargs and "filtapply" in kwargs:
             parfilt=kwargs["parfilt"]
@@ -1311,16 +1221,12 @@ def make_diags(ldiag,obj,ss,rd,filin,inst,indf,domtraj,Hn,res,basetime,olon,olat
             val= fld.getvalue_ll(obj.lonc,obj.latc,interpolation="linear")
             setattr(obj,diag.strg,[obj.lonc, obj.latc, val])
         elif diag.area=="s": #On cherche valeur extreme dans carre de cote ss et on lisse
-            #print("COMPUTE EXTREMUM VALUE OF "+diag.strg)
-            #print("origin:", obj.lonc,obj.latc, " - ss=", ss)
             if diag.kind=="max" or diag.kind=="min":
                 if diag.kind=="max":
                     sign=1
                 else:
                     sign=-1
                 lon,lat,val,dist,gook2 = find_aextr(sign,fld,obj.lonc,obj.latc,ss=diag.areaval)
-                #print("First guess:",lon, lat, val)
-                #print("Final diag value: ",diag.strg,lon,lat,val)
                 setattr(obj,diag.strg,[lon, lat, val])
             elif diag.kind=="mean":
                 print("option kind=mean A CODER DANS Tools.make_diags")
@@ -1369,8 +1275,6 @@ def plot_F_LL(fld,tlon,tlat,fname,nl=10,vect=[]):
     #Number of contours : nl
     #Output is fname.png
 
-    #fld.what()
-    #print(tlon,tlat,vect)
     proj = ccrs.PlateCarree()
     fig1=plt.figure(figsize=(30,15))
     ax1 = plt.axes(projection = proj)
@@ -1381,7 +1285,6 @@ def plot_F_LL(fld,tlon,tlat,fname,nl=10,vect=[]):
     ax1.scatter(tlon,tlat,marker="x",c="k")
     if len(vect)==2*len(tlon):
         for ivi in range(len(tlon)):
-            #print(vect)
             plt.arrow(tlon[ivi],tlat[ivi],vect[2*ivi]/10,vect[2*ivi+1]/10,head_width=0.3)
     fig1.savefig(fname+'.png')
     plt.close(fig1)
@@ -1406,7 +1309,7 @@ def max_diag(par, traj, indf, dom, res, mintime, maxtime, basetime):
     #Outputs:
     #val, lon, lat, time of the maximum value
 
-    print("computing max_diag for "+par+" between ",mintime," and ",maxtime)
+    #print("computing max_diag for "+par+" between ",mintime," and ",maxtime)
 
     #Processing inputdef and get list of files and instants
     if isinstance(indf,str):

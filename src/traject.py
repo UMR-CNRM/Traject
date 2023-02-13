@@ -34,18 +34,6 @@ missval = -9999.0
 time_orig = np.datetime64("1970-01-01T00:00:00")
 time_fmt = "%Y%m%d%H"
 
-#Epygram environment
-#epygram.init_env()
-#os.environ["ECCODES_SAMPLES_PATH"] = ("/home/common/epygram/ext/eccodes/"
-
-#la création d'un dictionnaire qui contient tous les objets possible
-#Exemple: "EXC" est le nom du module
-#------et "Extratropical_Cyclone" est le nom de l'objet.
-obj_modules = {"Tropical_Cyclone": "CYC",
-               "Extratropical_Cyclone": "CYC",
-               "CYC": "CYC",
-               "unknown":"CYC"}
-
 def DefObject(classobj, ldiag, ltrap, **kwargs):
     '''Function to import the class of meteorological object that is needed by the user
     and creates an object
@@ -56,7 +44,6 @@ def DefObject(classobj, ldiag, ltrap, **kwargs):
     '''
 
     #L'importation du module convenable
-    #module = __import__("OBJ_"+obj_modules[classobj])
     module = __import__("OBJ_"+classobj)
 
     #Définition des classes qu'on veut utiliser
