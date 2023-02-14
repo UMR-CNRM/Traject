@@ -180,11 +180,11 @@ class inputdef():
                 dict = {'parameterCategory': 2, 'parameterNumber': 3,
                         'typeOfFirstFixedSurface':100, 'level': 850}
             elif str(param) == 'u10m':
-                dict = {'parameterCategory':2,'parameterNumber':2,
-                        'typeOfLevel':'heightAboveGround','scaledValueOfFirstFixedSurface':2}
+                dict = {'parameterCategory':2,'parameterNumber':2,'typeOfFirstFixedSurface': 103,
+                        'typeOfSecondFixedSurface':255,'level':10}
             elif str(param) == 'v10m':
-                dict = {'parameterCategory':2,'parameterNumber':3,
-                        'typeOfLevel':'heightAboveGround','scaledValueOfFirstFixedSurface':2}
+                dict = {'parameterCategory':2,'parameterNumber':3,'typeOfFirstFixedSurface': 103,
+                        'typeOfSecondFixedSurface':255,'level':10}
             elif str(param) == 'btir':
                 dict = {'parameterCategory': 5, 'parameterNumber': 7,
                         'scaleFactorOfCentralWaveNumber': 2,'scaledValueOfCentralWaveNumber': 9259259}
