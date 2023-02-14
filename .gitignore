@@ -8,3 +8,5 @@ test_cases/test?/track_test*.json
 test_cases/tmp/case*/*.nc
 test_cases/tmp/case*/*.grib
 
+#Notebooks
+notebooks/.ipynb_checkpoints/*.ipynb

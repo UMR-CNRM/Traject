@@ -527,10 +527,16 @@ def set_dom_limits(ltraj,opt,diag="",diagrad=0.0,dom=[]):
             res = 0.1
     elif diag=="":
         par = ltraj[0].algodef["specfields"]["track"]
-        res = ltraj[0].algodef["parres"][par]
+        if par in ltraj[0].algodef["parres"].keys():
+            res = ltraj[0].algodef["parres"][par]
+        else:
+            res = ltraj[0].algodef["parres"]["all"]
     else:
         dd = Tools.guess_diag(diag,True)
-        res = ltraj[0].algodef["parres"][dd.par]
+        if dd.par in ltraj[0].algodef["parres"].keys():
+            res = ltraj[0].algodef["parres"][dd.par]
+        else:
+            res = ltraj[0].algodef["parres"]["all"]
 
     if opt=="std":
         if ltraj[0].inputdef["origin"]=="obs":
