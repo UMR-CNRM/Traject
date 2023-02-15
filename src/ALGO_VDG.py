@@ -40,6 +40,12 @@ def track(algo,indf,linst,lfile,**kwargs):
     ss=algo.varalgo["ss"] #Size of the square for search of minimas (in degrees)
     w = algo.varalgo["w"] #Parameter to balance steering flow and past movement to find the guess
 
+    #uvmean_box ?
+    if "uvmean_box" in algo.varalgo:
+        uvmean_box=algo.varalgo["uvmean_box"]
+    else:
+        uvmean_box=0
+
     filtapply=Tools.check_filtapply(algo,indf,linst,lfile,res)
              # 1 if filtering must be applied in the routine ; 0 if the input data has already been filtered
     steering_levels = algo.varalgo["steering_levels"]
@@ -122,7 +128,7 @@ def track(algo,indf,linst,lfile,**kwargs):
             traj = DefTrack(algo.classobj,basetime=linst[0])
             traj.name = reftraj.name
             objectm0 = DefObject(algo.classobj, [], track_parameter,lonc=lon,latc=lat,time=linst2[it0])
-            u_steer, v_steer = Tools.comp_steering(objectm0.lonc,objectm0.latc,steering_levels,\
+            u_steer, v_steer = Tools.comp_steering(objectm0.lonc,objectm0.latc,steering_levels,uvmean_box,\
                     lfile[it0],linst2[it0],indf,res,domtraj,basetime,parfilt,filtapply)
 
             objectm0.traps["u_steer"] = u_steer
@@ -175,7 +181,7 @@ def track(algo,indf,linst,lfile,**kwargs):
             if gook:
                 #CREATE POINT ON THE TRACK
                 objectm = DefObject(algo.classobj, [], track_parameter,lonc=lon,latc=lat,time=inst)
-                u_steer, v_steer = Tools.comp_steering(objectm.lonc,objectm.latc,steering_levels,\
+                u_steer, v_steer = Tools.comp_steering(objectm.lonc,objectm.latc,steering_levels,uvmean_box,\
                         lfile[it],linst[it],indf,res,domtraj,basetime,parfilt,filtapply)
                 objectm.traps["u_steer"] = u_steer
                 objectm.traps["v_steer"] = v_steer

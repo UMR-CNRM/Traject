@@ -372,10 +372,11 @@ def get_dom_limits(ltraj, diag, res):
 #--------------------------------------------------------------------------#
 
 
-def comp_steering(lon,lat,steering_levels,filin,inst,indf,res,domtraj,basetime,parfilt,filtapply):
+def comp_steering(lon,lat,steering_levels,uvmean_box,filin,inst,indf,res,domtraj,basetime,parfilt,filtapply):
     #Compute steering flow at levels steering_levels at the location (lon,lat) - lon, lat can be single or list of values
     #If filtrad > 0.0, the steering flow is computed at equivalent resolution filtrad (in km),
     #filin is the input file, and indf the inputdef data
+    #uvmean_box : if >0, the size of the box (degrees) to compute the mean value of u,v
     #Output : u,v values of the steering flow (or list, if lon, lat are list)
 
     nlev = len(steering_levels)
@@ -413,17 +414,52 @@ def comp_steering(lon,lat,steering_levels,filin,inst,indf,res,domtraj,basetime,p
         fv.operation("/",nlev)
 
         for ivi in range(npts):
-            u_steer0.append(fu.getvalue_ll(tlon[ivi],tlat[ivi],interpolation="linear"))
-            v_steer0.append(fv.getvalue_ll(tlon[ivi],tlat[ivi],interpolation="linear"))
+            #Apply mean value of u,v in uvmean_box
+            u_steer0.append(np.mean(box_values(fu,tlon[ivi],tlat[ivi],uvmean_box)))
+            v_steer0.append(np.mean(box_values(fv,tlon[ivi],tlat[ivi],uvmean_box)))
 
     if uniq==1:
         u_steer=u_steer0[0]
         v_steer=v_steer0[0]
+        #print("STEERING FLOW WITH BOX: ", u_steer,v_steer)
+        #print("STEERING FLOW AT POINT: ", fu.getvalue_ll(tlon[ivi],tlat[ivi],interpolation="linear"), fv.getvalue_ll(tlon[ivi],tlat[ivi],interpolation="linear"))
     else:
         u_steer=u_steer0
         v_steer=v_steer0
     
     return u_steer,v_steer
+
+def box_values(fld,lon,lat,ssbox):
+    #Computes the box of values of fld
+    #of size ssbox (degrees) around lon,lat
+    #Output : a numpy array or a list
+
+    #Dimensions of fld
+    X = fld.geometry.dimensions['X']
+    Y = fld.geometry.dimensions['Y']
+
+    res=get_res(fld)
+
+    if ssbox==0:
+        box=[fld.getvalue_ll(lon,lat,interpolation="linear")]
+    else:
+        ssbox=ssbox+2*res
+        maxsizeX=int(round((ssbox/res)/2.0))
+        maxsizeY=int(round((ssbox/res)/2.0))
+    
+        if (fld.geometry.point_is_inside_domain_ll(lon+2*res, lat+2*res) and fld.geometry.point_is_inside_domain_ll(lon-2*res, lat-2*res)): 
+
+            pts=fld.geometry.nearest_points(lon,lat,request=dict(n="2*2"))
+
+            imin=max(1,pts[0][0]-maxsizeX)
+            imax=min(pts[2][0]+maxsizeX,X-1)
+            jmin=max(1,pts[0][1]-maxsizeY)
+            jmax=min(pts[3][1]+maxsizeY,Y-1)
+            box=fld.data[jmin:jmax,imin:imax]
+        else:
+            box=[fld.getvalue_ll(lon,lat,interpolation="linear")]
+
+    return box
 
 #--------------------------------------------------------------------------#
 #                    Calculs des critères de qualité                       #                                     
