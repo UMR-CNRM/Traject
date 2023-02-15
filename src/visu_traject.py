@@ -687,7 +687,10 @@ def plot_time_line(ltraj, nam, cax, leg, opt, cmap, **kwargs):
         
         timestamp = pd.to_datetime(time, format='%Y%m%d%H')
         cax.plot(timestamp,pdiag, color=lcol[ivi], **kwargs)
-        lname.append(ltraj[ivi].inputdef["member"][1:3])
+        if "member" in ltraj[ivi].inputdef.keys():
+            lname.append(ltraj[ivi].inputdef["member"][1:3])
+        else:
+            lname.append(ltraj[ivi].basetime)
         
     #legend
     if len(leg) > 0:

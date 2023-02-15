@@ -95,5 +95,8 @@ for name in lname:
     for obj in ltraj[0].traj:
         plt.plot(obj.lonc,obj.latc,'o',color='red')
     fig.savefig(repout+"tracks_"+name+".png")
+    #Plot mslp
+    fig2=time_plot(ltraj,diag="mslp_min_p",typeplot="line",colormap="gist_rainbow",leg=legend)
+    fig2.savefig(repout+"mslp_"+name+".png")
     plt.close("all")
 
