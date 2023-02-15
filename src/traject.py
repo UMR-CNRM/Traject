@@ -29,7 +29,7 @@ import epygram
 import concurrent.futures
 
 #Generic variables
-traject_version = 0.83
+traject_version = 0.84
 missval = -9999.0
 time_orig = np.datetime64("1970-01-01T00:00:00")
 time_fmt = "%Y%m%d%H"

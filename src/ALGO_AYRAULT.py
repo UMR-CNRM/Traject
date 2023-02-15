@@ -44,6 +44,11 @@ def track(algo,indf,linst,lfile,**kwargs):
     pvmin=algo.varalgo["pvmin"] #Quality of vorticity
     steering_levels = algo.varalgo["steering_levels"]
              #hPa levels taken into account for the computation of steering flow
+    #uvmean_box
+    if "uvmean_box" in algo.varalgo:
+        uvmean_box = algo.varalgo["uvmean_box"]
+    else:
+        uvmean_box = 0
 
     mintlen=algo.varalgo["mintlen"] #Minimum length required (in hours) to keep the track at the end
     accbool = algo.varalgo["accbool"] #if the acceleration criterion is applied or not
@@ -116,8 +121,8 @@ def track(algo,indf,linst,lfile,**kwargs):
         tlon, tlat, tval = Tools.find_allextr(signtrack, fld, dist=radmax, thr=thr_core)
 
         #Computation of steering flow parameters
-        u_steer1, v_steer1 = Tools.comp_steering(tlon,tlat,[lev1],lfile[it],linst[it],indf,res,domtraj,basetime,parfilt,filtapply)
-        u_steer2, v_steer2 = Tools.comp_steering(tlon,tlat,[lev2],lfile[it],linst[it],indf,res,domtraj,basetime,parfilt,filtapply)
+        u_steer1, v_steer1 = Tools.comp_steering(tlon,tlat,[lev1],uvmean_box,lfile[it],linst[it],indf,res,domtraj,basetime,parfilt,filtapply)
+        u_steer2, v_steer2 = Tools.comp_steering(tlon,tlat,[lev2],uvmean_box,lfile[it],linst[it],indf,res,domtraj,basetime,parfilt,filtapply)
 
         #Creation of objects with input parameters
         lobj=[]
