@@ -150,37 +150,55 @@ class ObjectM:
 
         return b
 
-    def advect(self,vtime,u,v):
+    def advect(self,vtime,u,v,pos=""):
         #Creates a new object (valid at time vtime), after the advection of self by u and v (m/s)
+        #If kind="o", we advect traps["olon"],traps["olat"] (raw tracking position)
+        #Otherwise we advect lonc, latc (default)
 
         obj = ObjectM([],[],time=vtime)
         dt = (datetime.strptime(obj.time,time_fmt) - datetime.strptime(self.time,time_fmt)).seconds #Timedelta (in seconds)
 
-        dlon = Tools.comp_length(self.lonc,self.latc,self.lonc+1.0,self.latc)*1000.0 #Distance (en m) d'un deg de longtitude
-        dlat = Tools.comp_length(self.lonc,self.latc,self.lonc,self.latc+1.0)*1000.0 #Distance (en m) d'un deg de latitude
+        if pos=="o":
+            lon1=self.traps["olon"]
+            lat1=self.traps["olat"]
+        else:
+            lon1=self.lonc
+            lat1=self.latc
 
-        obj.lonc = self.lonc + u*dt/dlon
-        obj.latc = self.latc + v*dt/dlon
+        dlon = Tools.comp_length(lon1,lat1,lon1+1.0,lat1)*1000.0 #Distance (en m) d'un deg de longtitude
+        dlat = Tools.comp_length(lon1,lat1,lon1,lat1+1.0)*1000.0 #Distance (en m) d'un deg de latitude
+
+        obj.lonc = lon1 + u*dt/dlon
+        obj.latc = lat1 + v*dt/dlat
 
         return obj
 
-    def comp_mvt(self,obj):
+    def comp_mvt(self,obj,pos=""):
         #computes the speed movement between obj (origin) and self
         #output : u,v (m/s)
 
         dt = (datetime.strptime(obj.time,time_fmt) - datetime.strptime(self.time,time_fmt)).seconds #Timedelta (in seconds)
 
+        if pos=="o":
+            lon0=obj.traps["olon"]
+            lat0=obj.traps["olat"]
+            lon1=self.traps["olon"]
+            lat1=self.traps["olat"]
+        else:
+            lon0 = obj.lonc
+            lat0 = obj.latc
+            lon1 = self.lonc
+            lat1 = self.latc
+
         dlon = Tools.comp_length(self.lonc,self.latc,self.lonc+1.0,self.latc)*1000.0 #Distance (en m) d'un deg de longtitude
         dlat = Tools.comp_length(self.lonc,self.latc,self.lonc,self.latc+1.0)*1000.0 #Distance (en m) d'un deg de latitude
 
         if not dt==0.0:
-            u_speed = (self.lonc - obj.lonc)*dlon/dt
-            v_speed = (self.latc - obj.latc)*dlat/dt
+            u_speed = (lon1 - lon0)*dlon/dt
+            v_speed = (lat1 - lat0)*dlat/dt
         else:
             u_speed = 0.0
             v_speed = 0.0
-
-        #print("uspeed,vspeed=", u_speed, v_speed)
 
         return u_speed, v_speed
 

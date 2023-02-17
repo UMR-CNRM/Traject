@@ -832,8 +832,6 @@ def find_locmin(fld, lon0 ,lat0 ,ss=0 , thr=maxval ):
     #In a square of size ss degrees (if ss not specified or 0, the whole
     #domain is searched for)
     #and which value is below thr
-    #To save time, the search is done from the point (lon0,lat0)
-    #in iteratively increasing squares (of size 2*dstep gridpoints)
     #Output : gook : boolean to verify a minimum has been found
     #Output : lat and lon are gridpoints of fld (to interpolate, use smooth_min() afterwards
 
@@ -847,17 +845,6 @@ def find_locmin(fld, lon0 ,lat0 ,ss=0 , thr=maxval ):
 
     res=get_res(fld)
 
-    #max size est le nombre d iterations correspondant a la taille d un demi cote du carre dans
-    #lequel le minimum est recherche
-    #Pour un carre de recherche de ss = 2 degree, avec une resolution de 0.5 degree le nombre
-    #d iteration sera de 2 (2 * 0.5 = 1 degree)
-    
-    #Si la zone de recherche est petite on peut se permettre de prendre la plupart des point (dstep petit)
-    if ss < 5:
-        dstep = 1 #Increment of square size
-    else:
-        dstep = 3
-    
     if ss==0:
         maxsize=min(int(X/2),int(Y/2)) 
     else:
@@ -870,32 +857,35 @@ def find_locmin(fld, lon0 ,lat0 ,ss=0 , thr=maxval ):
 
         pts=fld.geometry.nearest_points(lon0,lat0,request=dict(n="2*2"))
 
-        ivi = 0
         dmin=maxval
         valmin=maxval
         outok = False
 
-        while ivi < maxsize and not outok:
-            ivi = ivi + dstep
-            imin=max(1,pts[0][0]-ivi)
-            imax=min(pts[2][0]+ivi,X-1)
-            jmin=max(1,pts[0][1]-ivi)
-            jmax=min(pts[3][1]+ivi,Y-1)
-            tab=fld.data[jmin:jmax,imin:imax]
-            indexf = local_minima(tab)
-            
-            if np.size(indexf) > 0: #Finds the closest local minimum
-                outok=True
-                nfound = np.shape(indexf)[1]
-                for ivj in range(nfound):
-                    lon,lat = fld.geometry.ij2ll(indexf[1][ivj]+imin,indexf[0][ivj]+jmin)
-                    dist=comp_length(lon0,lat0,lon,lat)
-                    val = fld.getvalue_ll(lon,lat)
-                    if (val<thr) and (dist<dmin):
-                        dmin=dist
-                        valmin=val
-                        lon1=lon
-                        lat1=lat
+        ivi = int(maxsize)
+        #print("ss=",ss,"maxsize=",maxsize,"ivi=",ivi)
+        imin=max(1,pts[0][0]-ivi)
+        imax=min(pts[2][0]+ivi,X-1)
+        jmin=max(1,pts[0][1]-ivi)
+        jmax=min(pts[3][1]+ivi,Y-1)
+        #print("imin,imax,jmin,jmax",imin,imax,jmin,jmax)
+        #print("llmin,llmax",fld.geometry.ij2ll(imin,jmin),fld.geometry.ij2ll(imax,jmax))
+        tab=fld.data[jmin:jmax,imin:imax]
+        indexf = local_minima(tab)
+        
+        if np.size(indexf) > 0: #Finds the closest local minimum
+            outok=True
+            nfound = np.shape(indexf)[1]
+            for ivj in range(nfound):
+                lon,lat = fld.geometry.ij2ll(indexf[1][ivj]+imin,indexf[0][ivj]+jmin)
+                dist=comp_length(lon0,lat0,lon,lat)
+                val = fld.getvalue_ll(lon,lat)
+                #print("LONLAT2",lon,lat,val,tab[indexf[0],indexf[1]])
+                if (val<thr) and (dist<dmin):
+                    dmin=dist
+                    valmin=val
+                    lon1=lon
+                    lat1=lat
+                    #print("Potential kernel : ",lon1,lat1,valmin, dist)
 
         gook = (dmin<maxval) and (valmin<thr)
 
