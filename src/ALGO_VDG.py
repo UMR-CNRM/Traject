@@ -302,4 +302,4 @@ def search_pairing(trackpar,signtrack,thr_track,pairpar,signpair,thr_pair,baseti
         lat = lat0
         #Pas utile d'ajouter un lissage sur trackpar
 
-    return lon,lat,val,valpair,lon0,lat0,gook1
+    return lon,lat,val,valpair,lon0,lat0,gook2
