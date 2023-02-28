@@ -8,6 +8,6 @@
 	"param_nc":{"mslp":"msl","rv":"vo","u":"u","v":"v"},
 	"param_file":{"mslp":"msl","rv850":"vo","u850":"uv","v850":"uv","u700":"uv","v700":"uv","u500":"uv","v500":"uv"},
 	"special_keys":["ff_uv"],
-	"directory": "/cnrm/recyf/NO_SAVE/Data/users/plu/TRAJECT/ERA5/",
+	"directory": "/home/plum/tests_traject/data/ERA5/",
 	"filename":"[experiment]_[YYYY]_[param_file].[nativefmt]"
 }

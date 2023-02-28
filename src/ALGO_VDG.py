@@ -62,7 +62,7 @@ def track(algo,indf,linst,lfile,**kwargs):
     thr_track = algo.varalgo["thr_track"] #Minimum absolute value of tracked core
     thr_pair = algo.varalgo["thr_pairing"] #Minimum value of paired core
 
-    track_parameter = [trackpar,pairpar,"u_speed","v_speed","u_steer","v_steer"]
+    track_parameter = [trackpar,pairpar,"olon","olat","u_speed","v_speed","u_steer","v_steer"] #olon, olat : coordinates of the trackpar extrema, used for tracking
 
     rd=0.0
     if "rd" in algo.varalgo:
@@ -113,12 +113,9 @@ def track(algo,indf,linst,lfile,**kwargs):
             it0=it0+1
             print(linst2[it0])
             refobj, gook1 =reftraj.find_inst(linst2[it0]) #Attention, delta t différent !!
-            #if not refobj==[]:
-            #    print(refobj[0].__dict__)
             if gook1:
                 lon,lat,val,valpair,olon,olat,gook = search_pairing(trackpar,signtrack,thr_track,pairpar,signpair,\
                 thr_pair,basetime,parfilt,filtapply,refobj[0].lonc,refobj[0].latc,lfile[it0],linst2[it0],indf,domtraj,res,ss)
-            #print("ok ?",it0, gook, gook1)
 
         if gook: #A 
             #Creation of the track
@@ -128,7 +125,9 @@ def track(algo,indf,linst,lfile,**kwargs):
             traj = DefTrack(algo.classobj,basetime=linst[0])
             traj.name = reftraj.name
             objectm0 = DefObject(algo.classobj, [], track_parameter,lonc=lon,latc=lat,time=linst2[it0])
-            u_steer, v_steer = Tools.comp_steering(objectm0.lonc,objectm0.latc,steering_levels,uvmean_box,\
+            objectm0.traps["olon"]=olon
+            objectm0.traps["olat"]=olat
+            u_steer, v_steer = Tools.comp_steering(objectm0.traps["olon"],objectm0.traps["olat"],steering_levels,uvmean_box,\
                     lfile[it0],linst2[it0],indf,res,domtraj,basetime,parfilt,filtapply)
 
             objectm0.traps["u_steer"] = u_steer
@@ -160,10 +159,13 @@ def track(algo,indf,linst,lfile,**kwargs):
             objm1 = objm[0]
 
             #Computation of a guess (advection by the steering flow and displacement speed at objm1)
+            #We advect olon, olat
             obj_guess = objm1.advect(inst, (1-w)*objm1.traps["u_steer"]+ w*objm1.traps["u_speed"],
-                (1-w)*objm1.traps["v_steer"]+ w*objm1.traps["v_speed"])
-            print(objm1.__dict__)
-            print(obj_guess.__dict__)
+                (1-w)*objm1.traps["v_steer"]+ w*objm1.traps["v_speed"],pos="o")
+            #print("STEERING WIND:",objm1.traps["u_steer"],objm1.traps["v_steer"])
+            #print("SPEED WIND:",objm1.traps["u_speed"],objm1.traps["v_speed"])
+            #print(objm1.__dict__)
+            #print(obj_guess.__dict__)
 
             lon,lat,val,valpair,olon,olat,gook = search_pairing(trackpar,signtrack,thr_track,pairpar,signpair,\
                 thr_pair,basetime,parfilt,filtapply,obj_guess.lonc,obj_guess.latc,lfile[it],linst[it],indf,domtraj,res,ss)
@@ -173,7 +175,7 @@ def track(algo,indf,linst,lfile,**kwargs):
             if DEBUGGING:
 
                 flda = Inputs.extract_data(lfile[it],linst[it],indf,trackpar,domtraj,res[trackpar],basetime,filtrad=parfilt[trackpar]*filtapply)
-                Tools.plot_F_LL(flda,[objm1.lonc],[objm1.latc],trackpar+datetime.strftime(linst[it],format=time_fmt),nl=20,\
+                Tools.plot_F_LL(flda,[objm1.traps["olon"]],[objm1.traps["olat"]],trackpar+datetime.strftime(linst[it],format=time_fmt),nl=20,\
                     vect=[(1-w)*objm1.traps["u_steer"]+ w*objm1.traps["u_speed"],(1-w)*objm1.traps["v_steer"]+ w*objm1.traps["v_speed"]])
                 fldb = Inputs.extract_data(lfile[it],linst[it],indf,pairpar,domtraj,res[trackpar],basetime,filtrad=parfilt[trackpar]*filtapply)
                 Tools.plot_F_LL(fldb,[objm1.lonc],[objm1.latc],pairpar+datetime.strftime(linst[it],format=time_fmt),nl=20)
@@ -181,11 +183,13 @@ def track(algo,indf,linst,lfile,**kwargs):
             if gook:
                 #CREATE POINT ON THE TRACK
                 objectm = DefObject(algo.classobj, [], track_parameter,lonc=lon,latc=lat,time=inst)
-                u_steer, v_steer = Tools.comp_steering(objectm.lonc,objectm.latc,steering_levels,uvmean_box,\
+                objectm.traps["olon"]=olon
+                objectm.traps["olat"]=olat
+                u_steer, v_steer = Tools.comp_steering(objectm.traps['olon'],objectm.traps["olat"],steering_levels,uvmean_box,\
                         lfile[it],linst[it],indf,res,domtraj,basetime,parfilt,filtapply)
                 objectm.traps["u_steer"] = u_steer
                 objectm.traps["v_steer"] = v_steer
-                u_speed, v_speed = objectm.comp_mvt(objm1)
+                u_speed, v_speed = objectm.comp_mvt(objm1,pos="o")
                 objectm.traps["u_speed"] = u_speed
                 objectm.traps["v_speed"] = v_speed
                 objectm.traps[trackpar] = val
@@ -231,12 +235,12 @@ def search_core(trackpar,signtrack,thr_track,pairpar,signpair,thr_pair,basetime,
     #Extract trackpar field
     flda = Inputs.extract_data(filin,inst,indf,trackpar,domtraj,res[trackpar],basetime,filtrad=parfilt[trackpar]*filtapply)
     lon0,lat0,val,dist,gook1 = Tools.find_locextr(signtrack, flda,g_lon,g_lat,ss=ss,thr=thr_track)
-    print(trackpar+" kernel: ", val, "at location :", lon0, lat0)
+    #print(trackpar+" kernel: ", val, "at location :", lon0, lat0)
 
     if gook1:
         fldb = Inputs.extract_data(filin,inst,indf,pairpar,domtraj,res[pairpar],basetime,filtrad=parfilt[pairpar]*filtapply)
         lon,lat,val,dist,gook2 = Tools.find_locextr(signpair, fldb,lon0,lat0,ss=ss,thr=thr_pair)
-        print(pairpar+" kernel: ", val, "at location :", lon, lat)
+        #print(pairpar+" kernel: ", val, "at location :", lon, lat)
         #tests
         #tlon,tlat,tval=Tools.find_allmin(fldb,thr=100000.00)
         #print("guess:",lon0,lat0,'+/-',ss/2)
@@ -272,13 +276,14 @@ def search_pairing(trackpar,signtrack,thr_track,pairpar,signpair,thr_pair,baseti
 
     #Extract trackpar field
     flda = Inputs.extract_data(filin,inst,indf,trackpar,domtraj,res[trackpar],basetime,filtrad=parfilt[trackpar]*filtapply)
+    #print("kernel guess :", g_lon, g_lat)
     lon0,lat0,val,dist,gook1 = Tools.find_locextr(signtrack, flda,g_lon,g_lat,ss=ss,thr=thr_track)
-    print(trackpar+" kernel: ", val, "at location :", lon0, lat0)
+    #print(trackpar+" kernel: ", val, "at location :", lon0, lat0)
 
     if gook1:
         fldb = Inputs.extract_data(filin,inst,indf,pairpar,domtraj,res[pairpar],basetime,filtrad=parfilt[pairpar]*filtapply)
         lon,lat,valpair,dist,gook2 = Tools.find_locextr(signpair, fldb,lon0,lat0,ss=ss,thr=thr_pair)
-        print(pairpar+" kernel: ", valpair, "at location :", lon, lat)
+        #print(pairpar+" kernel: ", valpair, "at location :", lon, lat)
         #tests
         #tlon,tlat,tval=Tools.find_allmin(fldb,thr=100000.00)
         #print("guess:",lon0,lat0,'+/-',ss/2)
@@ -295,5 +300,6 @@ def search_pairing(trackpar,signtrack,thr_track,pairpar,signpair,thr_pair,baseti
     else:
         lon = lon0
         lat = lat0
+        #Pas utile d'ajouter un lissage sur trackpar
 
-    return lon,lat,val,valpair,lon0,lat0,gook1
+    return lon,lat,val,valpair,lon0,lat0,gook2
