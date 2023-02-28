@@ -614,9 +614,10 @@ def Read(inputfile,select=["all"]):
 
 def Select(ltraj,select):
     #selects the list of tracks the ones that correspond to the values given in the select list:
-    # - a member,
-    # - a basetime,
-    # - a track name,
+    # - a member ({"member"=}),
+    # - a basetime ({"basetime"=...}),
+    # - a track name ({"name"=...}),
+    # - an interval of instants ({"time"={}), which are the valid times - in that case the tracks can be truncated
     # ... more possible to come
 
     #Apply select
@@ -644,6 +645,22 @@ def Select(ltraj,select):
                 ns=select[ff]
                 ltrajout=[traj for traj in ltrajout if traj.name==ns]
 
+            elif ff=="time":
+                ltrajout2=[]
+                timetraj=select[ff]
+                if not "step" in timetraj.keys():
+                    timetraj["step"]=1
+                linst=Inputs.comptimes(timetraj)
+                for traj in ltrajout:
+                    trajout2 = copy.deepcopy(traj)
+                    trajout2.nobj = 0
+                    trajout2.traj=[]
+                    for obj in traj.traj:
+                        if obj.time in linst:
+                            trajout2.add_obj(obj)
+                    if trajout2.nobj>0:
+                        ltrajout2.append(trajout2)
+                ltrajout = ltrajout2
             else:
                 print("Wrong select key in traject.Select()")
     
