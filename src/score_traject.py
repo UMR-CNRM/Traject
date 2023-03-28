@@ -69,7 +69,11 @@ def score_comp_diff(lref, ltraj, basetime, ldiag, nmb, fname, proj="merc"):
             if d2.compares(d1) and not chkis:
                 namediagt[dg]=dt
                 chkis=True
-                
+    print(namediagr)
+    print(d1.__dict__)
+    print(namediagt)
+    print(d2.__dict__)
+                        
     #Loop on tracknames (in reference)
     for tref in lref:
         tname = tref.name
@@ -135,10 +139,19 @@ def score_comp_diff(lref, ltraj, basetime, ldiag, nmb, fname, proj="merc"):
                                 data.loc[ind,"obs"] = tref.traj[itr].latc
                             else: #other diagnostic
                                 print(traj.traj[it].__dict__[namediagt[dg]], tref.traj[itr].__dict__[namediagr[dg]])
-                                if not (traj.traj[it].__dict__[namediagt[dg]][2]==missval or tref.traj[itr].__dict__[namediagr[dg]][2]==missval):
-                                    data.loc[ind,"mb"+str(mb).rjust(3,"0")] = traj.traj[it].__dict__[namediagt[dg]][2] - tref.traj[itr].__dict__[namediagr[dg]][2]
-                                    #print(data.loc[ind,"obs"], tref.traj[itr].__dict__[namediagr[dg]][2], "should be equivalent if not zero")
-                                    data.loc[ind,"obs"] = tref.traj[itr].__dict__[namediagr[dg]][2]
+                                lvalt=traj.traj[it].__dict__[namediagt[dg]]
+                                lvalr=tref.traj[itr].__dict__[namediagr[dg]]
+                                if isinstance(lvalt,float):
+                                    valt=lvalt
+                                else:
+                                    valt=lvalt[2]
+                                if isinstance(lvalr,float):
+                                    valr=lvalr
+                                else:
+                                    valr=lvalr[2]                                
+                                if not (valt==missval or valr==missval):
+                                    data.loc[ind,"mb"+str(mb).rjust(3,"0")] = valt - valr
+                                    data.loc[ind,"obs"] = valr
 
     # Write output file
     data.to_csv(fname, sep=',')
