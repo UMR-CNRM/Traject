@@ -344,12 +344,6 @@ def track(algo,indf,linst,lfile,**kwargs):
     ''' Step 3: Selection and output trajectories '''
 #=========================================================================#
 
-    #List of diagnostics
-    if pairpar in diag_parameter:
-        ldiag2=[x for x in diag_parameter if not x==pairpar]
-    else:
-        ldiag2=diag_parameter
-
     #Loop on nsuiv
     st=(signtrack==1)
     inam=0
@@ -391,11 +385,11 @@ def track(algo,indf,linst,lfile,**kwargs):
                         if gook:
                             obj.lonc = lon
                             obj.latc = lat
-                        if pairpar in diag_parameter: #Add pairing diagnostic in traj
-                            obj.diags.append(pairpar)
-                            setattr(obj,pairpar,val)
+                        #if pairpar in diag_parameter: #Add pairing diagnostic in traj #Depreciated
+                        #    obj.diags.append(pairpar)
+                        #    setattr(obj,pairpar,val)
 
-                    Tools.make_diags(ldiag2,obj,ss,rd,lfile[it],linst[it],indf,domtraj,Hn,res,basetime,olon,olat,parfilt=parfilt,filtapply=filtapply) #Add diagnostics in traj
+                    Tools.make_diags(diag_parameter,obj,ss,rd,lfile[it],linst[it],indf,domtraj,Hn,res,basetime,olon,olat,parfilt=parfilt,filtapply=filtapply) #Add diagnostics in traj
 
                 ltraj.append(traj)
 
