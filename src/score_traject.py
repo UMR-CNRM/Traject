@@ -262,12 +262,9 @@ def plot_boxplot_score(fig, df, diag, pdt, echmax, qmin, qmax, **kwargs) :
     #List of members in the dataframe
     lcol = list(data.columns)
     lmembers = [col for col in lcol if col[0:2]=="mb"]
-    #print(lmembers)
     
     #Filtering diagnostic name
     datid = data.loc[data["diag"]==diag.lower()]
-    #print(datid["fctime"])
-    #print("filter :", datid.loc[datid["fctime"]==0])
 
     fct=1
     if diag.lower() not in ["tte","cte","ate"]:
@@ -289,8 +286,29 @@ def plot_boxplot_score(fig, df, diag, pdt, echmax, qmin, qmax, **kwargs) :
         l_nb_parech.append(nb_parech)
         ech = ech + pdt
 
+    #Plot properties
+    plt.rcParams['font.size'] = 12
+    lwidth = 2
+    boxprops = dict(linestyle = '-', linewidth = lwidth, color = 'black')
+    whiskerprops = dict(linestyle = '-', linewidth = lwidth, color = 'black')
+    flierprops = dict(marker = 'D', markerfacecolor = 'k', markersize = 5,
+                  markeredgecolor = 'k')
+    medianprops = dict(linestyle = '-', linewidth = lwidth, color = 'tab:red')
+    meanpointprops = dict(marker = 'o', markeredgecolor = 'tab:blue',
+                      markerfacecolor = 'tab:blue', markersize = 5)
+
     #Make plot
-    plt.boxplot(l_TE, medianprops= {'color' : 'b'},whis=[int(qmin),int(qmax)], showfliers=False)
+    #plt.boxplot(l_TE, medianprops= {'color' : 'b'},whis=[int(qmin),int(qmax)], showfliers=False)
+    plt.boxplot(l_TE,
+            whiskerprops = whiskerprops,
+            boxprops = boxprops,
+            medianprops = medianprops,
+            meanprops = meanpointprops,
+            whis=[int(qmin),int(qmax)],
+            showfliers=False,
+            showmeans=True,
+            zorder=2)
+
     ax=plt.gca()
     ax.set_xticklabels(labels=l_ech,rotation=45)
     ax.set_xlabel("Echéance (en h)")#, ha='left')
@@ -300,6 +318,7 @@ def plot_boxplot_score(fig, df, diag, pdt, echmax, qmin, qmax, **kwargs) :
         ylab=diag+" (km)"
     else:
         ylab=Tools.guess_diag(diag,True).nicename+" ("+Tools.guess_diag(diag,True).plot_unit+") : lines"
+    ax.grid(axis = 'y')
     ax.set_ylabel(ylab)
 
     # ajout de la ligne 0
@@ -308,9 +327,9 @@ def plot_boxplot_score(fig, df, diag, pdt, echmax, qmin, qmax, **kwargs) :
     # Ajout de la courbe : nb de cyclones par ech
     ax1=ax.twinx()
     x_decal = list(range(1,len(l_ech)+1)) #decalage car boxplot commence a 1 ...
-    ax1.plot(x_decal,l_nb_parech,color='g')#, label="nb cyclone")
+    ax1.plot(x_decal,l_nb_parech,'-.',color='grey',zorder=1)#, label="nb cyclone")
     ax1.set_ylim([0,max(l_nb_parech)+10])
-    ax1.set_ylabel("Nombre de cyclones")
+    ax1.set_ylabel("Number of tracks")
     
     return
 
