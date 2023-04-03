@@ -88,12 +88,6 @@ def track(algo,indf,linst,lfile,**kwargs):
     if len(lref)==0:
         print("WARNING - No reference track found could be found (required for VDG tracking algorithm)")
 
-    #List of diagnostics
-    if pairpar in diag_parameter:
-        ldiag2=[x for x in diag_parameter if not x==pairpar]
-    else:
-        ldiag2=diag_parameter
-
     #Loops on points found in the reference tracks
     for iref in range(len(lref)):
         if "traj" in locals():
@@ -136,9 +130,9 @@ def track(algo,indf,linst,lfile,**kwargs):
             objectm0.traps["v_speed"] = v_steer
             objectm0.traps[trackpar] = val
             objectm0.traps[pairpar] = valpair
-            if pairpar in diag_parameter: #Add pairing diagnostic in traj
-                obj.diags.append(pairpar)
-                setattr(obj,pairpar,valpair)
+            #if pairpar in diag_parameter: #Add pairing diagnostic in traj #Depreciated
+            #    obj.diags.append(pairpar)
+            #    setattr(obj,pairpar,valpair)
 
             Tools.make_diags(diag_parameter,objectm0,ss,rd,lfile[it0],linst2[it0],indf,domtraj,Hn,res,basetime,olon,olat,parfilt=parfilt,filtapply=filtapply) #Add diagnostics in traj
             traj.add_obj(objectm0)
@@ -194,13 +188,13 @@ def track(algo,indf,linst,lfile,**kwargs):
                 objectm.traps["v_speed"] = v_speed
                 objectm.traps[trackpar] = val
                 objectm.traps[pairpar] = valpair
-                traj.add_obj(objectm)
 
                 # WRITE DIAGNOSTIC PARAMETERS
-                if pairpar in diag_parameter: #Add pairing diagnostic in traj
-                    obj.diags.append(pairpar)
-                    setattr(obj,pairpar,valpair)
+                #if pairpar in diag_parameter: #Add pairing diagnostic in traj #Depreciated
+                #    obj.diags.append(pairpar)
+                #    setattr(obj,pairpar,valpair)
                 Tools.make_diags(diag_parameter,objectm,ss,rd,lfile[it],linst[it],indf,domtraj,Hn,res,basetime,olon,olat,parfilt=parfilt,filtapply=filtapply) #Add diagnostics in traj
+                traj.add_obj(objectm)
 
         if "traj" in locals():
             stt=(signtrack==1)

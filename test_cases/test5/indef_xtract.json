@@ -4,7 +4,7 @@
     "model": "arpege",
     "domain": "glob025",
     "experiment": "oper",
-    "directory": "/cnrm/recyf/NO_SAVE/Data/users/plu/TRAJECT/ARPfc/vdg/",
+    "directory": "/home/plum/tests_traject/data/ARPfc/vdg/",
     "filename": "XTRACT[YYYYMMDDHH]_[term:4].grib",
     "special_keys": [
         "rv_av",
