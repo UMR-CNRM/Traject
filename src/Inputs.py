@@ -386,6 +386,9 @@ class algodef():
         #Special field options (optional, depends on the algorithm)
         self.specfields=None
 
+        if not namelist=="": #Builds from the namelist if it is provided
+            self.read_input(namelist)
+
     def update_input(self,dico):
         #Updates the self objects with the keys and values in the dictionary dico
 
