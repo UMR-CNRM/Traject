@@ -330,6 +330,7 @@ def track(algo,indf,timetraj,**kwargs):
         kwargs.pop("reftraj")
     else:
         lref = ["noref"]
+        nref = 0
 
     #Parallelization options (only applies on fc)
     if "ntasks" in algo2.parallel:
@@ -342,7 +343,8 @@ def track(algo,indf,timetraj,**kwargs):
 
         for basetime in Inputs.comptimes(timetraj): #Loop on timetraj
             lfile,linst2 = indf2.get_filinst(kwargs["termtraj"],basetime)
-            lref = Tools.get_reftraj(linst2,algo2.domtraj,nref)
+            if nref>0:
+                lref = Tools.get_reftraj(linst2,algo2.domtraj,nref)
 
             for reftraj in lref: #Loop on lref
                 #Loop on members
