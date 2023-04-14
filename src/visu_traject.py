@@ -900,7 +900,7 @@ def get_col(cmap,n):
         for ivi in range(n):
             lcol.append(mpl.colors.to_hex(gmap(ivi/(n-1)), keep_alpha=True))
     elif n>0:
-        lcol=mpl.colors.to_hex(gmap(0), keep_alpha=True)
+        lcol=[mpl.colors.to_hex(gmap(0), keep_alpha=True)]
         
     return lcol
     

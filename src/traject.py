@@ -326,7 +326,8 @@ def track(algo,indf,timetraj,**kwargs):
 
     #Read reftraj (if any)
     if "reftraj" in kwargs:
-        nref = kwargs["reftraj"]
+        refnam = kwargs["reftraj"]
+        nref = 1
         kwargs.pop("reftraj")
     else:
         lref = ["noref"]
@@ -344,7 +345,7 @@ def track(algo,indf,timetraj,**kwargs):
         for basetime in Inputs.comptimes(timetraj): #Loop on timetraj
             lfile,linst2 = indf2.get_filinst(kwargs["termtraj"],basetime)
             if nref>0:
-                lref = Tools.get_reftraj(linst2,algo2.domtraj,nref)
+                lref = Tools.get_reftraj(linst2,algo2.domtraj,refnam)
 
             for reftraj in lref: #Loop on lref
                 #Loop on members
