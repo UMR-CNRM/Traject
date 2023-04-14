@@ -116,7 +116,7 @@ def track(algo,indf,linst,lfile,**kwargs):
             print("A starting point has been found at time : ",linst2[it0])
             print("Reference point:",refobj[0].lonc,refobj[0].latc)
             print("Point found:",lon,lat)
-            traj = DefTrack(algo.classobj,basetime=linst[0])
+            traj = DefTrack(algo.classobj,basetime=basetime)
             traj.name = reftraj.name
             objectm0 = DefObject(algo.classobj, [], track_parameter,lonc=lon,latc=lat,time=linst2[it0])
             objectm0.traps["olon"]=olon

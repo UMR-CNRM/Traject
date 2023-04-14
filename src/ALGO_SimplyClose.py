@@ -96,7 +96,7 @@ def track(algo,indf,linst,lfile,**kwargs):
         if gook:
             print("A starting point has been found at time : ",linst2[it0])
             #Creation of the track
-            traj = DefTrack(algo.classobj,basetime=linst2[it0])
+            traj = DefTrack(algo.classobj,basetime=basetime)
             traj.name = reftraj.name
             objectm0 = DefObject(algo.classobj, [], track_parameter,lonc=lon,latc=lat,time=linst2[it0])
             Tools.make_diags(diag_parameter,objectm0,ss,rd,lfile[0],linst2[0],indf,domtraj,Hn,res,basetime,lon,lat)
