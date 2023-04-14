@@ -161,6 +161,9 @@ class inputdef():
             elif str(param) == 'av850': #Absolute vorticity at 850hPa
                 dict = {'parameterCategory': 2, 'parameterNumber': 10,
                         'typeOfFirstFixedSurface':100, 'level': 850}
+            elif str(param) == 'rv850': #Relative vorticity at 850hPa
+                dict = {'parameterCategory': 2, 'parameterNumber': 12,
+                        'typeOfFirstFixedSurface':100, 'level': 850}
             elif str(param) == 'u500': #1st Horizontal component of wind at 500hPa
                 dict = {'parameterCategory': 2, 'parameterNumber': 2,
                         'typeOfFirstFixedSurface':100, 'level': 500}
