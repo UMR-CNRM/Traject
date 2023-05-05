@@ -311,7 +311,7 @@ def plot_boxplot_score(fig, df, diag, pdt, echmax, qmin, qmax, **kwargs) :
 
     ax=plt.gca()
     ax.set_xticklabels(labels=l_ech,rotation=45)
-    ax.set_xlabel("Echéance (en h)")#, ha='left')
+    ax.set_xlabel("Forecast term (h)")#, ha='left')
     if "ylim" in kwargs:
         ax.set_ylim(kwargs["ylim"])
     if diag.lower() in ["tte","cte","ate"]:
@@ -427,7 +427,7 @@ def plot_line_score(fig, df, diag, pdt, echmax, lmetric, **kwargs) :
         ax=plt.gca()
         ax.set_xticks(l_ech)
         ax.set_xticklabels(labels=l_ech,rotation=45)
-        ax.set_xlabel("Echéance (en h)")#, ha='left')
+        ax.set_xlabel("Forecast term (hours)")#, ha='left')
 
     return
 
