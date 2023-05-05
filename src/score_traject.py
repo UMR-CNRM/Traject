@@ -425,6 +425,7 @@ def plot_line_score(fig, df, diag, pdt, echmax, lmetric, **kwargs) :
         ax.plot(l_ech,plval,**kwargs)
 
         ax=plt.gca()
+        ax.set_xticks(l_ech)
         ax.set_xticklabels(labels=l_ech,rotation=45)
         ax.set_xlabel("Echéance (en h)")#, ha='left')
 
