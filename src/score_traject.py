@@ -422,6 +422,11 @@ def plot_line_score(fig, df, diag, pdt, echmax, lmetric, **kwargs) :
             print("Bad metric in plot_line_score()")
             plval = [0.0 for ivi in range(len(l_ech))]
 
+        #ylim
+        if "ylim" in kwargs:
+           ax.set_ylim(kwargs["ylim"])
+           kwargs.pop("ylim")
+
         ax.plot(l_ech,plval,**kwargs)
 
         ax=plt.gca()
