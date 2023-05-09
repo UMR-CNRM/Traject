@@ -614,6 +614,9 @@ def read_nc(f1,inst,parnc,levnc):
         elif not single_time:
             print("Extraction of data at time " + str(times[indt[0]]))
             fs = f1.readfield(parnc,only={timename:indt[0]},adhoc_behaviour=adhb)
+        elif not single_level:
+            print("Extraction of data at level " + str(levels[indl[0]]))
+            fs = f1.readfield(parnc,only={levname:indl[0]},adhoc_behaviour=adhb)
         else:
             print("Extraction of data")
             fs = f1.readfield(parnc)
