@@ -51,6 +51,12 @@ def init_algo(algo,indf,linst,lfile,**kwargs):
         domtraj, res, lons, lats = Inputs.extract_domain(lfile[0],linst[0],indf,varname[0]) #domtraj is the total grid
     else:
         domtraj=algo.domtraj
+    
+    #subnproc
+    subnproc=1
+    if algo.parallel is not None:
+        if "subnproc" in algo.parallel:
+            subnproc=algo.parallel["subnproc"]
 
     #Compute dictionary of resolutions
     dres = get_parres(algo,indf,lfile[0],linst[0])
@@ -90,7 +96,7 @@ def init_algo(algo,indf,linst,lfile,**kwargs):
             diag=diagdef(diagname,Hn,ss,rd)
             ldiag.append(diag)
 
-    return domtraj, dres, deltat, Hn, ldiag
+    return domtraj, dres, deltat, Hn, ldiag, subnproc
 
 #--------------------------------------------------------------------------#
 
@@ -372,7 +378,7 @@ def get_dom_limits(ltraj, diag, res):
 #--------------------------------------------------------------------------#
 
 
-def comp_steering(lon,lat,steering_levels,uvmean_box,filin,inst,indf,res,domtraj,basetime,parfilt,filtapply):
+def comp_steering(lon,lat,steering_levels,uvmean_box,filin,inst,indf,res,domtraj,basetime,parfilt,filtapply,subnproc):
     #Compute steering flow at levels steering_levels at the location (lon,lat) - lon, lat can be single or list of values
     #If filtrad > 0.0, the steering flow is computed at equivalent resolution filtrad (in km),
     #filin is the input file, and indf the inputdef data
@@ -401,15 +407,15 @@ def comp_steering(lon,lat,steering_levels,uvmean_box,filin,inst,indf,res,domtraj
         v_steer0=[0.0 for ivi in range(npts)]
     else:
         ch='u'+str(int(lev))
-        fu = Inputs.extract_data(filin,inst,indf,ch,domtraj,res[ch],basetime,filtrad=parfilt[ch]*filtapply)
+        fu = Inputs.extract_data(filin,inst,indf,ch,domtraj,res[ch],basetime,subnproc,filtrad=parfilt[ch]*filtapply)
         ch='v'+str(int(lev))
-        fv = Inputs.extract_data(filin,inst,indf,ch,domtraj,res[ch],basetime,filtrad=parfilt[ch]*filtapply)
+        fv = Inputs.extract_data(filin,inst,indf,ch,domtraj,res[ch],basetime,subnproc,filtrad=parfilt[ch]*filtapply)
         for ivi in range(1,nlev):
             lev=steering_levels[ivi]
             ch='u'+str(int(lev))
-            fu.operation("+",Inputs.extract_data(filin,inst,indf,ch,domtraj,res[ch],basetime,filtrad=parfilt[ch]*filtapply))
+            fu.operation("+",Inputs.extract_data(filin,inst,indf,ch,domtraj,res[ch],basetime,subnproc,filtrad=parfilt[ch]*filtapply))
             ch='v'+str(int(lev))
-            fv.operation("+",Inputs.extract_data(filin,inst,indf,ch,domtraj,res[ch],basetime,filtrad=parfilt[ch]*filtapply))
+            fv.operation("+",Inputs.extract_data(filin,inst,indf,ch,domtraj,res[ch],basetime,subnproc,filtrad=parfilt[ch]*filtapply))
         fu.operation("/",nlev)
         fv.operation("/",nlev)
 
@@ -1228,7 +1234,7 @@ def guess_diag(strdiag,Hn):
 
     return diag
 
-def make_diags(ldiag,obj,ss,rd,filin,inst,indf,domtraj,Hn,res,basetime,olon,olat,**kwargs):
+def make_diags(ldiag,obj,ss,rd,filin,inst,indf,domtraj,Hn,res,basetime,olon,olat,subnproc,**kwargs):
     #olon, olat: origin points (tracking parameter)
 
     for diag in ldiag:
@@ -1239,7 +1245,7 @@ def make_diags(ldiag,obj,ss,rd,filin,inst,indf,domtraj,Hn,res,basetime,olon,olat
             filtrad=parfilt[diag.par]*filtapply
         else:
             filtrad=0.0
-        fld=Inputs.extract_data(filin,inst,indf,diag.par,domtraj,res[diag.par],basetime,filtrad=filtrad)
+        fld=Inputs.extract_data(filin,inst,indf,diag.par,domtraj,res[diag.par],basetime,subnproc,filtrad=filtrad)
         if diag.area=="o":
             val= fld.getvalue_ll(olon,olat,interpolation="linear")
             setattr(obj,diag.strg,[olon, olat, val])
@@ -1323,7 +1329,7 @@ def plot_F_LL(fld,tlon,tlat,fname,nl=10,vect=[]):
 #                      Some field processing                               #
 #--------------------------------------------------------------------------#
 
-def max_diag(par, traj, indf, dom, res, mintime, maxtime, basetime):
+def max_diag(par, traj, indf, dom, res, mintime, maxtime, basetime,subnproc=1):
     #Computes the maximum value of a parameter inside a domain, between mintime and maxtime
     #Inputs:
     #traj: the trajectory corresponding to the data (to get some metadata if needed)
@@ -1372,7 +1378,7 @@ def max_diag(par, traj, indf, dom, res, mintime, maxtime, basetime):
     while it<=len(lfile)-1: # and Inputs.check_file(lfile[it],indf2,par,par):
 
         #Extraction of field (no filtering applied)
-        flda = Inputs.extract_data(lfile[it],linst[it],indf2,par,dom,res,basetime)
+        flda = Inputs.extract_data(lfile[it],linst[it],indf2,par,dom,res,basetime,subnproc)
         lon0 = 0.5*(dom["lonmax"]+dom["lonmin"])
         lat0 = 0.5*(dom["latmax"]+dom["latmin"])
         #print(lon0,lat0)

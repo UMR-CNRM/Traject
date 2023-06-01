@@ -33,7 +33,7 @@ DEBUGGING=False
 def track(algo,indf,linst,lfile,**kwargs):
 
     #Initialisation of domtraj, res, deltat depending on the input parameters
-    domtraj, res, deltat, Hn, diag_parameter = Tools.init_algo(algo,indf,linst,lfile,**kwargs)
+    domtraj, res, deltat, Hn, diag_parameter, subnproc = Tools.init_algo(algo,indf,linst,lfile,**kwargs)
 
     #Tracking variables used by the algorithm
     parfilt=algo.parfilt #Effective resolution of the fields
@@ -109,7 +109,7 @@ def track(algo,indf,linst,lfile,**kwargs):
             refobj, gook1 =reftraj.find_inst(linst2[it0]) #Attention, delta t différent !!
             if gook1:
                 lon,lat,val,valpair,olon,olat,gook = search_pairing(trackpar,signtrack,thr_track,pairpar,signpair,\
-                thr_pair,basetime,parfilt,filtapply,refobj[0].lonc,refobj[0].latc,lfile[it0],linst2[it0],indf,domtraj,res,ss)
+                thr_pair,basetime,parfilt,filtapply,refobj[0].lonc,refobj[0].latc,lfile[it0],linst2[it0],indf,domtraj,res,ss,subnproc)
 
         if gook: #A 
             #Creation of the track
@@ -122,7 +122,7 @@ def track(algo,indf,linst,lfile,**kwargs):
             objectm0.traps["olon"]=olon
             objectm0.traps["olat"]=olat
             u_steer, v_steer = Tools.comp_steering(objectm0.traps["olon"],objectm0.traps["olat"],steering_levels,uvmean_box,\
-                    lfile[it0],linst2[it0],indf,res,domtraj,basetime,parfilt,filtapply)
+                    lfile[it0],linst2[it0],indf,res,domtraj,basetime,parfilt,filtapply,subnproc)
 
             objectm0.traps["u_steer"] = u_steer
             objectm0.traps["v_steer"] = v_steer
@@ -134,7 +134,7 @@ def track(algo,indf,linst,lfile,**kwargs):
             #    obj.diags.append(pairpar)
             #    setattr(obj,pairpar,valpair)
 
-            Tools.make_diags(diag_parameter,objectm0,ss,rd,lfile[it0],linst2[it0],indf,domtraj,Hn,res,basetime,olon,olat,parfilt=parfilt,filtapply=filtapply) #Add diagnostics in traj
+            Tools.make_diags(diag_parameter,objectm0,ss,rd,lfile[it0],linst2[it0],indf,domtraj,Hn,res,basetime,olon,olat,subnproc,parfilt=parfilt,filtapply=filtapply) #Add diagnostics in traj
             traj.add_obj(objectm0)
 
         #------------------------------------------------------------------------------
@@ -162,16 +162,16 @@ def track(algo,indf,linst,lfile,**kwargs):
             #print(obj_guess.__dict__)
 
             lon,lat,val,valpair,olon,olat,gook = search_pairing(trackpar,signtrack,thr_track,pairpar,signpair,\
-                thr_pair,basetime,parfilt,filtapply,obj_guess.lonc,obj_guess.latc,lfile[it],linst[it],indf,domtraj,res,ss)
+                thr_pair,basetime,parfilt,filtapply,obj_guess.lonc,obj_guess.latc,lfile[it],linst[it],indf,domtraj,res,ss,subnproc)
 
             #Some plot to debug
                   #DEBUG - Plot champs et des points candidats (pour voir)
             if DEBUGGING:
 
-                flda = Inputs.extract_data(lfile[it],linst[it],indf,trackpar,domtraj,res[trackpar],basetime,filtrad=parfilt[trackpar]*filtapply)
+                flda = Inputs.extract_data(lfile[it],linst[it],indf,trackpar,domtraj,res[trackpar],basetime,subnproc,filtrad=parfilt[trackpar]*filtapply)
                 Tools.plot_F_LL(flda,[objm1.traps["olon"]],[objm1.traps["olat"]],trackpar+datetime.strftime(linst[it],format=time_fmt),nl=20,\
                     vect=[(1-w)*objm1.traps["u_steer"]+ w*objm1.traps["u_speed"],(1-w)*objm1.traps["v_steer"]+ w*objm1.traps["v_speed"]])
-                fldb = Inputs.extract_data(lfile[it],linst[it],indf,pairpar,domtraj,res[trackpar],basetime,filtrad=parfilt[trackpar]*filtapply)
+                fldb = Inputs.extract_data(lfile[it],linst[it],indf,pairpar,domtraj,res[trackpar],basetime,subnproc,filtrad=parfilt[trackpar]*filtapply)
                 Tools.plot_F_LL(fldb,[objm1.lonc],[objm1.latc],pairpar+datetime.strftime(linst[it],format=time_fmt),nl=20)
 
             if gook:
@@ -180,7 +180,7 @@ def track(algo,indf,linst,lfile,**kwargs):
                 objectm.traps["olon"]=olon
                 objectm.traps["olat"]=olat
                 u_steer, v_steer = Tools.comp_steering(objectm.traps['olon'],objectm.traps["olat"],steering_levels,uvmean_box,\
-                        lfile[it],linst[it],indf,res,domtraj,basetime,parfilt,filtapply)
+                        lfile[it],linst[it],indf,res,domtraj,basetime,parfilt,filtapply,subnproc)
                 objectm.traps["u_steer"] = u_steer
                 objectm.traps["v_steer"] = v_steer
                 u_speed, v_speed = objectm.comp_mvt(objm1,pos="o")
@@ -193,7 +193,7 @@ def track(algo,indf,linst,lfile,**kwargs):
                 #if pairpar in diag_parameter: #Add pairing diagnostic in traj #Depreciated
                 #    obj.diags.append(pairpar)
                 #    setattr(obj,pairpar,valpair)
-                Tools.make_diags(diag_parameter,objectm,ss,rd,lfile[it],linst[it],indf,domtraj,Hn,res,basetime,olon,olat,parfilt=parfilt,filtapply=filtapply) #Add diagnostics in traj
+                Tools.make_diags(diag_parameter,objectm,ss,rd,lfile[it],linst[it],indf,domtraj,Hn,res,basetime,olon,olat,subnproc,parfilt=parfilt,filtapply=filtapply) #Add diagnostics in traj
                 traj.add_obj(objectm)
 
         if "traj" in locals():
@@ -217,7 +217,7 @@ def track(algo,indf,linst,lfile,**kwargs):
 
     return ltraj
 
-def search_core(trackpar,signtrack,thr_track,pairpar,signpair,thr_pair,basetime,parfilt,filtapply,g_lon,g_lat,filin,inst,indf,domtraj,res,ss):
+def search_core(trackpar,signtrack,thr_track,pairpar,signpair,thr_pair,basetime,parfilt,filtapply,g_lon,g_lat,filin,inst,indf,domtraj,res,ss,subnproc):
     #Search the core from the guess position g_lon, g_lat obtained after advection from the previous instant
     #trackpar is the parameter which is tracked from one instant to the other (for instance : rv850)
     #pairpar is the core of the structure (for instance: mslp)
@@ -227,12 +227,12 @@ def search_core(trackpar,signtrack,thr_track,pairpar,signpair,thr_pair,basetime,
     lat=missval
 
     #Extract trackpar field
-    flda = Inputs.extract_data(filin,inst,indf,trackpar,domtraj,res[trackpar],basetime,filtrad=parfilt[trackpar]*filtapply)
+    flda = Inputs.extract_data(filin,inst,indf,trackpar,domtraj,res[trackpar],basetime,subnproc,filtrad=parfilt[trackpar]*filtapply)
     lon0,lat0,val,dist,gook1 = Tools.find_locextr(signtrack, flda,g_lon,g_lat,ss=ss,thr=thr_track)
     #print(trackpar+" kernel: ", val, "at location :", lon0, lat0)
 
     if gook1:
-        fldb = Inputs.extract_data(filin,inst,indf,pairpar,domtraj,res[pairpar],basetime,filtrad=parfilt[pairpar]*filtapply)
+        fldb = Inputs.extract_data(filin,inst,indf,pairpar,domtraj,res[pairpar],basetime,subnproc,filtrad=parfilt[pairpar]*filtapply)
         lon,lat,val,dist,gook2 = Tools.find_locextr(signpair, fldb,lon0,lat0,ss=ss,thr=thr_pair)
         #print(pairpar+" kernel: ", val, "at location :", lon, lat)
         #tests
@@ -253,7 +253,7 @@ def search_core(trackpar,signtrack,thr_track,pairpar,signpair,thr_pair,basetime,
 
     return lon,lat,val,lon0,lat0,gook2
 
-def search_pairing(trackpar,signtrack,thr_track,pairpar,signpair,thr_pair,basetime,parfilt,filtapply,g_lon,g_lat,filin,inst,indf,domtraj,res,ss):
+def search_pairing(trackpar,signtrack,thr_track,pairpar,signpair,thr_pair,basetime,parfilt,filtapply,g_lon,g_lat,filin,inst,indf,domtraj,res,ss,subnproc):
     #Search the core from the guess position g_lon, g_lat obtained after advection from the previous instant
     #trackpar is the parameter which is tracked from one instant to the other (for instance : rv850)
     #pairpar is the core of the structure (for instance: mslp)
@@ -269,13 +269,13 @@ def search_pairing(trackpar,signtrack,thr_track,pairpar,signpair,thr_pair,baseti
         valpair=-missval
 
     #Extract trackpar field
-    flda = Inputs.extract_data(filin,inst,indf,trackpar,domtraj,res[trackpar],basetime,filtrad=parfilt[trackpar]*filtapply)
+    flda = Inputs.extract_data(filin,inst,indf,trackpar,domtraj,res[trackpar],basetime,subnproc,filtrad=parfilt[trackpar]*filtapply)
     #print("kernel guess :", g_lon, g_lat)
     lon0,lat0,val,dist,gook1 = Tools.find_locextr(signtrack, flda,g_lon,g_lat,ss=ss,thr=thr_track)
     #print(trackpar+" kernel: ", val, "at location :", lon0, lat0)
 
     if gook1:
-        fldb = Inputs.extract_data(filin,inst,indf,pairpar,domtraj,res[pairpar],basetime,filtrad=parfilt[pairpar]*filtapply)
+        fldb = Inputs.extract_data(filin,inst,indf,pairpar,domtraj,res[pairpar],basetime,subnproc,filtrad=parfilt[pairpar]*filtapply)
         lon,lat,valpair,dist,gook2 = Tools.find_locextr(signpair, fldb,lon0,lat0,ss=ss,thr=thr_pair)
         #print(pairpar+" kernel: ", valpair, "at location :", lon, lat)
         #tests

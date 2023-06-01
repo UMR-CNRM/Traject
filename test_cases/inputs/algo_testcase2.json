@@ -8,6 +8,6 @@
 	"parres":{"all":0.5},
 	"specfields":{"track":"rv850","pairing":"mslp"},
 	"diag_parameter":["mslp_o","mslp_p"],
-	"parallel":{"ntasks":2}
+	"parallel":{"ntasks":2,"subnproc":2}
 }
 

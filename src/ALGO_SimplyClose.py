@@ -35,7 +35,7 @@ from traject import *
 def track(algo,indf,linst,lfile,**kwargs):
 
     #Initialisation of domtraj, diag_parameter, deltat depending on the input parameters
-    domtraj, res, deltat, Hn, diag_parameter = Tools.init_algo(algo,indf,linst,lfile,**kwargs)
+    domtraj, res, deltat, Hn, diag_parameter, subnproc = Tools.init_algo(algo,indf,linst,lfile,**kwargs)
 
     #Tracking variables used by the algorithm
     max_dist = max(algo.varalgo["maxdist"],algo.varalgo["maxspeed"]*deltat)
@@ -84,7 +84,7 @@ def track(algo,indf,linst,lfile,**kwargs):
             it0=it0+1
             print(linst2[it0])
             refobj, gook =reftraj.find_inst(linst2[it0]) #Attention, delta t différent !!
-            fld = Inputs.extract_data(lfile[it0],linst[it0],indf,trackpar,domtraj,res[trackpar],basetime)
+            fld = Inputs.extract_data(lfile[it0],linst[it0],indf,trackpar,domtraj,res[trackpar],basetime,subnproc)
             lon,lat,val,dist,gook = Tools.find_locextr(signtrack,fld,refobj[0].lonc,refobj[0].latc)
             gook = gook and(dist<=max_dist)
             #print("Reference: ",linst[0],refobj[0].lonc,refobj[0].latc)
@@ -99,7 +99,7 @@ def track(algo,indf,linst,lfile,**kwargs):
             traj = DefTrack(algo.classobj,basetime=basetime)
             traj.name = reftraj.name
             objectm0 = DefObject(algo.classobj, [], track_parameter,lonc=lon,latc=lat,time=linst2[it0])
-            Tools.make_diags(diag_parameter,objectm0,ss,rd,lfile[0],linst2[0],indf,domtraj,Hn,res,basetime,lon,lat)
+            Tools.make_diags(diag_parameter,objectm0,ss,rd,lfile[0],linst2[0],indf,domtraj,Hn,res,basetime,lon,lat,subnproc)
             traj.add_obj(objectm0)
 
         #------------------------------------------------------------------------------
@@ -115,7 +115,7 @@ def track(algo,indf,linst,lfile,**kwargs):
             inst=linst[it]
             objm1,fnd=traj.find_inst(instm1)
 
-            fld = Inputs.extract_data(lfile[it],linst[it],indf,trackpar,domtraj,res[trackpar],basetime)
+            fld = Inputs.extract_data(lfile[it],linst[it],indf,trackpar,domtraj,res[trackpar],basetime,subnproc)
             lon,lat,val,dist,gook = Tools.find_locextr(signtrack,fld,objm1[0].lonc,objm1[0].latc)
 
             gook=(dist<=max_dist)
@@ -124,7 +124,7 @@ def track(algo,indf,linst,lfile,**kwargs):
                 objectm = DefObject(algo.classobj, [], track_parameter,lonc=lon,latc=lat,time=inst)
 
                 #DIAGNOSTIC PARAMETERS
-                Tools.make_diags(diag_parameter,objectm,ss,rd,lfile[it],linst[it],indf,domtraj,Hn,res,basetime,lon,lat)
+                Tools.make_diags(diag_parameter,objectm,ss,rd,lfile[it],linst[it],indf,domtraj,Hn,res,basetime,lon,lat,subnproc)
                 traj.add_obj(objectm)
 
         if "traj" in locals():

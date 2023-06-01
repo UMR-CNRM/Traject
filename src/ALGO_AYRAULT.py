@@ -32,7 +32,7 @@ DEBUGGING=False
 def track(algo,indf,linst,lfile,**kwargs):
 
     #Initialisation of domtraj, diag_parameter, Hn, deltat depending on the input parameters
-    domtraj, res, deltat, Hn, diag_parameter = Tools.init_algo(algo,indf,linst,lfile,**kwargs)
+    domtraj, res, deltat, Hn, diag_parameter, subnproc = Tools.init_algo(algo,indf,linst,lfile,**kwargs)
 
     #Tracking variables used by the algorithm
     parfilt=algo.parfilt #Effective resolution of the fields
@@ -117,12 +117,12 @@ def track(algo,indf,linst,lfile,**kwargs):
         print(inst,lfile[it])
 
         #Finding all extremas
-        fld = Inputs.extract_data(lfile[it],linst[it],indf,trackpar,domtraj,res[trackpar],basetime,filtrad=parfilt[trackpar]*filtapply)
+        fld = Inputs.extract_data(lfile[it],linst[it],indf,trackpar,domtraj,res[trackpar],basetime,subnproc,filtrad=parfilt[trackpar]*filtapply)
         tlon, tlat, tval = Tools.find_allextr(signtrack, fld, dist=radmax, thr=thr_core)
 
         #Computation of steering flow parameters
-        u_steer1, v_steer1 = Tools.comp_steering(tlon,tlat,[lev1],uvmean_box,lfile[it],linst[it],indf,res,domtraj,basetime,parfilt,filtapply)
-        u_steer2, v_steer2 = Tools.comp_steering(tlon,tlat,[lev2],uvmean_box,lfile[it],linst[it],indf,res,domtraj,basetime,parfilt,filtapply)
+        u_steer1, v_steer1 = Tools.comp_steering(tlon,tlat,[lev1],uvmean_box,lfile[it],linst[it],indf,res,domtraj,basetime,parfilt,filtapply,subnproc)
+        u_steer2, v_steer2 = Tools.comp_steering(tlon,tlat,[lev2],uvmean_box,lfile[it],linst[it],indf,res,domtraj,basetime,parfilt,filtapply,subnproc)
 
         #Creation of objects with input parameters
         lobj=[]
@@ -167,7 +167,7 @@ def track(algo,indf,linst,lfile,**kwargs):
             clev=[offset + x*(thr_track-offset)/5.0 for x in range(1,20)]
             ax1.contourf(plon,plat,sig*fld.data,clev)
             #Plot other field
-            #fld2 = Inputs.extract_data(lfile[it],linst[it],indf,"rr1h",domtraj,res["rr1h"],basetime,filtrad=parfilt["rr1h"]*filtapply)
+            #fld2 = Inputs.extract_data(lfile[it],linst[it],indf,"rr1h",domtraj,res["rr1h"],basetime,subnproc,filtrad=parfilt["rr1h"]*filtapply)
             #plon2,plat2=fld2.geometry.get_lonlat_grid()
             #clev2=[x for x in range(1,20)]
             #ax1.contourf(plon2,plat2,fld2.data,clev2)
@@ -381,7 +381,7 @@ def track(algo,indf,linst,lfile,**kwargs):
                     olat=obj.latc
                     #print("time found: ",obj.time,it,linst[it],lfile[it])
                     if not pairpar == "":
-                        lon,lat,val,gook = search_pairing(pairpar,signpair,thr_pairing,ss,obj.lonc,obj.latc,lfile[it],linst[it],indf,domtraj,res,basetime,parfilt,filtapply)
+                        lon,lat,val,gook = search_pairing(pairpar,signpair,thr_pairing,ss,obj.lonc,obj.latc,lfile[it],linst[it],indf,domtraj,res,basetime,parfilt,filtapply,subnproc)
                         if gook:
                             obj.lonc = lon
                             obj.latc = lat
@@ -389,19 +389,19 @@ def track(algo,indf,linst,lfile,**kwargs):
                         #    obj.diags.append(pairpar)
                         #    setattr(obj,pairpar,val)
 
-                    Tools.make_diags(diag_parameter,obj,ss,rd,lfile[it],linst[it],indf,domtraj,Hn,res,basetime,olon,olat,parfilt=parfilt,filtapply=filtapply) #Add diagnostics in traj
+                    Tools.make_diags(diag_parameter,obj,ss,rd,lfile[it],linst[it],indf,domtraj,Hn,res,basetime,olon,olat,subnproc,parfilt=parfilt,filtapply=filtapply) #Add diagnostics in traj
 
                 ltraj.append(traj)
 
     return ltraj
 
-def search_pairing(pairpar,signpair,thr_pairing,ss,lon0,lat0,filin,inst,indf,domtraj,res,basetime,parfilt,filtapply):
+def search_pairing(pairpar,signpair,thr_pairing,ss,lon0,lat0,filin,inst,indf,domtraj,res,basetime,parfilt,filtapply,subnproc):
     #Search the closest mslp relative min from the position lon0, lat0
 
     lon=missval
     lat=missval
 
-    fldb = Inputs.extract_data(filin,inst,indf,pairpar,domtraj,res[pairpar],basetime,filtrad=parfilt[pairpar]*filtapply)
+    fldb = Inputs.extract_data(filin,inst,indf,pairpar,domtraj,res[pairpar],basetime,subnproc,filtrad=parfilt[pairpar]*filtapply)
 
     lon,lat,val,dist,gook2 = Tools.find_locextr(signpair,fldb,lon0,lat0,ss=ss,thr=thr_pairing)
 
