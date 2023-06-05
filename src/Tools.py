@@ -1050,6 +1050,7 @@ def maskrad(lons,lats,lonc,latc,rad):
 
     nlon = len(lons)
     nlat = len(lats)
+    #print("Tools.maskrad dimensions: nlon=",nlon," nlat=",nlat," - nlon*nlat=",nlon*nlat)
     tab = np.zeros((nlat,nlon),dtype=int)
     for ivx in range(nlon):
         for ivy in range(nlat):
@@ -1065,7 +1066,7 @@ def bufferrad(lons,lats,tab1,rad):
     ##Input:
     #lons, lats: longitudes and latitudes of the domain on which to compute the mask
     #tab : first guess (0 or 1) around which the radius is extended
-    #rad: distance to apply around the existing zone in tab1
+    #rad: distance to apply around the existing zone in tab1 (km)
     #Output: tab: array of shape (len(lons), len(lats)), 1 if in the mask, 0 otherwise
 
     nlat=len(lats)
@@ -1076,19 +1077,32 @@ def bufferrad(lons,lats,tab1,rad):
     reslon=lons[1]-lons[0]
     reslat=lats[1]-lats[0]
 
+    #print("Tools.bufferrad dimensions: nlon=",nlon," nlat=",nlat," - nlon*nlat=",nlon*nlat)
     #Find existing contour in tab
     if np.max(tab2) > np.min(tab2):
         cs = plt.contour(tab2,levels=listseuils,cmap='jet')
         paths=cs.collections[0].get_paths()
+        #print("Tools.bufferrad ; number of objects: npaths=",len(paths))
         for p in paths:
             polygon=Polygon(p.vertices)
 
             #Projection du polygone en x,y
+            xt, yt = polygon.exterior.coords.xy
             x0,y0=polygon.centroid.xy
             x=x0[0]
-            y=x0[0]
+            y=y0[0] 
             lonc=lons[int(max(0,min(x,nlon-1)))]
             latc=lats[int(max(0,min(y,nlat-1)))]
+
+            tdx=comp_length(lonc,latc,lonc+reslon,latc)
+            tdy=comp_length(lonc,latc,lonc,latc+reslat)
+            marg = 3 # margin
+            minxt=max(0,int(min(xt)-rad/tdx-marg))
+            maxxt=min(nlon-1,int(max(xt+rad/tdx+1+marg)))
+            minyt=max(0,int(min(yt)-rad/tdy-marg))
+            maxyt=min(nlat-1,int(min(yt+rad/tdy)+1+marg))
+            #print("max/min: ", minxt, maxxt,minyt,maxyt)
+
             aeqd_proj = "+proj=aeqd +lat_0="+str(latc)+" +lon_0="+str(lonc)+" +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m"
             proj = pyproj.Transformer.from_crs(pyproj.CRS.from_proj4(latlon_proj),pyproj.CRS.from_string(aeqd_proj))
             xy_list = [proj.transform( interp(x,int(x),int(x)+1,lons[int(x)],lons[int(x)]+reslon),
@@ -1101,8 +1115,8 @@ def bufferrad(lons,lats,tab1,rad):
             proj_inv = pyproj.Transformer.from_crs(pyproj.CRS.from_string(aeqd_proj),pyproj.CRS.from_proj4(latlon_proj))
             pol = Polygon([proj_inv.transform(xy_pol[0][ivi], xy_pol[1][ivi]) for ivi in range(len(xy_pol[0]))])
 
-            for ivx in range(nlon):
-                for ivy in range(nlat):
+            for ivx in range(minxt,maxxt):
+                for ivy in range(minyt,maxyt):
                     if pol.contains(Point(lons[ivx],lats[ivy])):
                         tab2[ivy,ivx] = 1
 
