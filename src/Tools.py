@@ -295,9 +295,9 @@ def get_validtime(bt,lt=0):
     #output is in string fmt
 
     if isinstance(bt,str):
-        tt= datetime.strptime(bt,Inputs.time_fmt)+timedelta(hours=t)
+        tt= datetime.strptime(bt,Inputs.time_fmt)+timedelta(hours=lt)
     else:
-        tt= bt + timedelta(hours=t)
+        tt= bt + timedelta(hours=lt)
 
     vtime = datetime.strftime(tt,Inputs.time_fmt)
 

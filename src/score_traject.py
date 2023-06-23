@@ -42,9 +42,9 @@ def score_comp_diff(lref, ltraj, basetime, ldiag, nmb, fname, proj="merc"):
     for im in range(nmb):
         hline.append("mb"+str(im).rjust(3,"0"))
     ncol=len(hline)
-    print(hline)
+    #print(hline)
     data = pd.DataFrame(columns=hline,dtype="float32")
-    print(data)
+    #print(data)
     #print(data.loc(['name']))
 
     #Correspondance of diagnostics names between ltraj and lref
@@ -69,10 +69,10 @@ def score_comp_diff(lref, ltraj, basetime, ldiag, nmb, fname, proj="merc"):
             if d2.compares(d1) and not chkis:
                 namediagt[dg]=dt
                 chkis=True
-    print(namediagr)
-    print(d1.__dict__)
-    print(namediagt)
-    print(d2.__dict__)
+    #print(namediagr)
+    #print(d1.__dict__)
+    #print(namediagt)
+    #print(d2.__dict__)
                         
     #Loop on tracknames (in reference)
     for tref in lref:
@@ -104,31 +104,36 @@ def score_comp_diff(lref, ltraj, basetime, ldiag, nmb, fname, proj="merc"):
                                     dline.append(np.nan)
                                 data.loc[get_index(tname,bt,term,dg)] = dline
                             #print(data.index)
+                            #print(dline)
 
                             mb=0 #member
                             if "member" in traj.inputdef:
                                 mb=int(traj.inputdef["member"])
 
                             if dg=="tte":
-                                print("Compute ", dg)
+                                #print("Compute ", dg)
                                 #itref, chk0 = tref.find_ind(traj.traj[it].time)
                                 ldist = comp_tte_cte_ate(tref,itr,traj.traj[it],proj)
                                 data.loc[ind,"mb"+str(mb).rjust(3,"0")] = ldist[dg]
                                 data.loc[ind,"obs"] = 0.0
                                 #dline.append(ldist[dg.lower()])
                             elif dg=="ate" or dg=="cte":
-                                print("Compute ", dg)
-                                if it>0:
-                                    itrefm1, chk1 = tref.find_ind(traj.traj[it-1].time)
+                                #print("Compute ", dg)
+                                dt_traj = traj.dt_traj()
+                                #print(traj.traj[it].time)
+                                #print(dt_traj)
+                                timm1=Tools.get_validtime(traj.traj[it].time,-dt_traj)
+                                timp1=Tools.get_validtime(traj.traj[it].time,dt_traj)
+                                if dt_traj>0:
+                                    itrefm1, chk1 = tref.find_ind(timm1)
+                                    itrefp1, chk2 = tref.find_ind(timp1)
                                 else:
-                                    chk1 = False
-                                if it<traj.nobj-1:
-                                    itrefp1, chk2 = tref.find_ind(traj.traj[it+1].time)
-                                else:
-                                    chk2 = False
+                                    chk1=False
+                                #print("member_"+str(mb),chk1, chk2, it, traj.nobj-1)
                                 if chk1 and chk2:
                                     ldist = comp_tte_cte_ate(tref,itr,traj.traj[it],proj,dt=[itrefm1[0],itrefp1[0]])
                                     data.loc[ind,"mb"+str(mb).rjust(3,"0")] = ldist[dg]
+                                    #print(dg+"=",ldist[dg])
                                     data.loc[ind,"obs"] = 0.0
                                 #dline.append(ldist[dg.lower()])
                             elif dg=="lonc":
@@ -138,7 +143,7 @@ def score_comp_diff(lref, ltraj, basetime, ldiag, nmb, fname, proj="merc"):
                                 data.loc[ind,"mb"+str(mb).rjust(3,"0")] = traj.traj[it].latc - tref.traj[itr].latc
                                 data.loc[ind,"obs"] = tref.traj[itr].latc
                             else: #other diagnostic
-                                print(traj.traj[it].__dict__[namediagt[dg]], tref.traj[itr].__dict__[namediagr[dg]])
+                                #print(traj.traj[it].__dict__[namediagt[dg]], tref.traj[itr].__dict__[namediagr[dg]])
                                 lvalt=traj.traj[it].__dict__[namediagt[dg]]
                                 lvalr=tref.traj[itr].__dict__[namediagr[dg]]
                                 if isinstance(lvalt,float):
@@ -207,18 +212,18 @@ def comp_tte_cte_ate(tref,itref,obj,proj,dt=[]):
         AP=np.array([xP-xA,yP-yA])
         dAP=distance_plan(xA,yA,xP,yP)
 
-        print(dt)
+        #print(dt)
         x_A_t0, y_A_t0 = LonLat_To_XY_merc(proj,tref.traj[dt[0]].lonc, tref.traj[dt[0]].latc)
         x_A_t2, y_A_t2 = LonLat_To_XY_merc(proj,tref.traj[dt[1]].lonc, tref.traj[dt[1]].latc)
         trajA=np.array([x_A_t2-x_A_t0, y_A_t2-y_A_t0])
         dtrajA=distance_plan(x_A_t0,y_A_t0, x_A_t2, y_A_t2)
 
-        print("dtraj : ", dtrajA)
+        #print("dtraj : ", dtrajA)
 
         # test valeur de TTE (pour éviter que ATE et CTE = nan qd TTE est nul)
         if TTE > 1e-6:
 
-            print("TTE=",TTE)  
+            #print("TTE=",TTE)  
 
             # calcul cosinus et sinus de l'angle entre la trajectoire analysée et le vecteur AP
 

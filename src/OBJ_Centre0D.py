@@ -359,7 +359,30 @@ class Track:
 
         return indm, found
 
+    def dt_traj(self,unit="h"):
+        #Compute time step between two objects in the track
+        #If the track is a single point, then the output is 0
+
+        if self.nobj>1:
+            diffs=(datetime.strptime(self.traj[1].time,time_fmt)-datetime.strptime(self.traj[0].time,time_fmt)).seconds
+            diffd=(datetime.strptime(self.traj[1].time,time_fmt)-datetime.strptime(self.traj[0].time,time_fmt)).days
+
+            if unit.lower()=="h":
+                td=diffs/3600.0+diffd*24.0
+            elif unit.lower()=="d":
+                td=diffs/3600.0/24.0+diffd
+            elif unit.lower()=="s":
+                td=diffs+diffd*3600.0*24.0
+            else:
+                print("wrong unit in OBJ_CYC traj tlen routin")
+                exit()
+        else:
+            td=0
+
+        return td
+
     def tlen(self,unit="h"):
+        #Compute length (in time unit) of the track
 
         diffs=(datetime.strptime(self.traj[-1].time,time_fmt)-datetime.strptime(self.traj[0].time,time_fmt)).seconds
         diffd=(datetime.strptime(self.traj[-1].time,time_fmt)-datetime.strptime(self.traj[0].time,time_fmt)).days
