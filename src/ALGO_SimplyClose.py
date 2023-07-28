@@ -99,7 +99,7 @@ def track(algo,indf,linst,lfile,**kwargs):
             traj = DefTrack(algo.classobj,basetime=basetime)
             traj.name = reftraj.name
             objectm0 = DefObject(algo.classobj, [], track_parameter,lonc=lon,latc=lat,time=linst2[it0])
-            Tools.make_diags(diag_parameter,objectm0,ss,rd,lfile[0],linst2[0],indf,domtraj,Hn,res,basetime,lon,lat,subnproc)
+            Tools.make_diags(diag_parameter,objectm0,lfile[0],linst2[0],indf,domtraj,Hn,res,basetime,lon,lat,subnproc)
             traj.add_obj(objectm0)
 
         #------------------------------------------------------------------------------
@@ -124,7 +124,7 @@ def track(algo,indf,linst,lfile,**kwargs):
                 objectm = DefObject(algo.classobj, [], track_parameter,lonc=lon,latc=lat,time=inst)
 
                 #DIAGNOSTIC PARAMETERS
-                Tools.make_diags(diag_parameter,objectm,ss,rd,lfile[it],linst[it],indf,domtraj,Hn,res,basetime,lon,lat,subnproc)
+                Tools.make_diags(diag_parameter,objectm,lfile[it],linst[it],indf,domtraj,Hn,res,basetime,lon,lat,subnproc)
                 traj.add_obj(objectm)
 
         if "traj" in locals():

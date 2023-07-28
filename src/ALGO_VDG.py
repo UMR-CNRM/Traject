@@ -134,7 +134,7 @@ def track(algo,indf,linst,lfile,**kwargs):
             #    obj.diags.append(pairpar)
             #    setattr(obj,pairpar,valpair)
 
-            Tools.make_diags(diag_parameter,objectm0,ss,rd,lfile[it0],linst2[it0],indf,domtraj,Hn,res,basetime,olon,olat,subnproc,parfilt=parfilt,filtapply=filtapply) #Add diagnostics in traj
+            Tools.make_diags(diag_parameter,objectm0,lfile[it0],linst2[it0],indf,domtraj,Hn,res,basetime,olon,olat,subnproc,parfilt=parfilt,filtapply=filtapply) #Add diagnostics in traj
             traj.add_obj(objectm0)
 
         #------------------------------------------------------------------------------
@@ -193,7 +193,7 @@ def track(algo,indf,linst,lfile,**kwargs):
                 #if pairpar in diag_parameter: #Add pairing diagnostic in traj #Depreciated
                 #    obj.diags.append(pairpar)
                 #    setattr(obj,pairpar,valpair)
-                Tools.make_diags(diag_parameter,objectm,ss,rd,lfile[it],linst[it],indf,domtraj,Hn,res,basetime,olon,olat,subnproc,parfilt=parfilt,filtapply=filtapply) #Add diagnostics in traj
+                Tools.make_diags(diag_parameter,objectm,lfile[it],linst[it],indf,domtraj,Hn,res,basetime,olon,olat,subnproc,parfilt=parfilt,filtapply=filtapply) #Add diagnostics in traj
                 traj.add_obj(objectm)
 
         if "traj" in locals():

@@ -389,7 +389,7 @@ def track(algo,indf,linst,lfile,**kwargs):
                         #    obj.diags.append(pairpar)
                         #    setattr(obj,pairpar,val)
 
-                    Tools.make_diags(diag_parameter,obj,ss,rd,lfile[it],linst[it],indf,domtraj,Hn,res,basetime,olon,olat,subnproc,parfilt=parfilt,filtapply=filtapply) #Add diagnostics in traj
+                    Tools.make_diags(diag_parameter,obj,lfile[it],linst[it],indf,domtraj,Hn,res,basetime,olon,olat,subnproc,parfilt=parfilt,filtapply=filtapply) #Add diagnostics in traj
 
                 ltraj.append(traj)
 

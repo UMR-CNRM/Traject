@@ -91,7 +91,8 @@ def init_algo(algo,indf,linst,lfile,**kwargs):
         rd=traject.missval
     for diagname in algo.diag_parameter:
         if diagname==pairpar and not pairpar=="": #Special case to diagnose pairpar
-            ldiag.append(pairpar)
+            diag=diagdef(pairpar,Hn,ss,rd)
+            ldiag.append(diag)
         else:
             diag=diagdef(diagname,Hn,ss,rd)
             ldiag.append(diag)
@@ -1248,7 +1249,7 @@ def guess_diag(strdiag,Hn):
 
     return diag
 
-def make_diags(ldiag,obj,ss,rd,filin,inst,indf,domtraj,Hn,res,basetime,olon,olat,subnproc,**kwargs):
+def make_diags(ldiag,obj,filin,inst,indf,domtraj,Hn,res,basetime,olon,olat,subnproc,**kwargs):
     #olon, olat: origin points (tracking parameter)
 
     for diag in ldiag:
