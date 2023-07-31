@@ -379,27 +379,26 @@ def get_dom_limits(ltraj, diag, res):
 #--------------------------------------------------------------------------#
 
 
-def comp_steering(lon,lat,steering_levels,uvmean_box,filin,inst,indf,res,domtraj,basetime,parfilt,filtapply,subnproc):
+def comp_steering(lobj,steering_levels,uvmean_box,filin,inst,indf,res,domtraj,basetime,parfilt,filtapply,subnproc,pos=""):
     #Compute steering flow at levels steering_levels at the location (lon,lat) - lon, lat can be single or list of values
     #If filtrad > 0.0, the steering flow is computed at equivalent resolution filtrad (in km),
     #filin is the input file, and indf the inputdef data
     #uvmean_box : if >0, the size of the box (degrees) to compute the mean value of u,v
+    #pos : position where to compute (default=lonc,latc)
     #Output : u,v values of the steering flow (or list, if lon, lat are list)
 
     nlev = len(steering_levels)
     u_steer0 = []
     v_steer0 = []
 
-    if isinstance(lon,list):
-        npts=len(lon) #list of values lon,lat
+    if isinstance(lobj,list):
+        npts=len(lobj) #list of values lon,lat
         uniq=False
-        tlon = lon
-        tlat = lat
+        tobj=lobj
     else:
         npts=1 #unique value
         uniq=True
-        tlon = [lon]
-        tlat = [lat]
+        tobj = [lobj]
 
     #Extraction of total steering field
     lev=steering_levels[0]
@@ -422,8 +421,14 @@ def comp_steering(lon,lat,steering_levels,uvmean_box,filin,inst,indf,res,domtraj
 
         for ivi in range(npts):
             #Apply mean value of u,v in uvmean_box
-            u_steer0.append(np.mean(box_values(fu,tlon[ivi],tlat[ivi],uvmean_box)))
-            v_steer0.append(np.mean(box_values(fv,tlon[ivi],tlat[ivi],uvmean_box)))
+            if pos=="o":
+                lon1=tobj[ivi].traps["olon"]
+                lat1=tobj[ivi].traps["olat"]
+            else:
+                lon1=tobj[ivi].lonc
+                lat1=tobj[ivi].latc
+            u_steer0.append(np.mean(box_values(fu,lon1,lat1,uvmean_box)))
+            v_steer0.append(np.mean(box_values(fv,lon1,lat1,uvmean_box)))
 
     if uniq==1:
         u_steer=u_steer0[0]
@@ -1255,9 +1260,11 @@ def make_diags(ldiag,obj,filin,inst,indf,domtraj,Hn,res,basetime,olon,olat,subnp
     for diag in ldiag:
         obj.diags.append(diag.strg)
         if "parfilt" in kwargs and "filtapply" in kwargs:
-            parfilt=kwargs["parfilt"]
-            filtapply=kwargs["filtapply"]
-            filtrad=parfilt[diag.par]*filtapply
+            if kwargs["filtapply"]==0:
+                filtrad=0.0
+            else:
+                parfilt=kwargs["parfilt"]
+                filtrad=parfilt[diag.par]*kwargs["filtapply"]
         else:
             filtrad=0.0
         fld=Inputs.extract_data(filin,inst,indf,diag.par,domtraj,res[diag.par],basetime,subnproc,filtrad=filtrad)

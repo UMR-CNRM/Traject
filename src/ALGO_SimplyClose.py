@@ -82,50 +82,36 @@ def track(algo,indf,linst,lfile,**kwargs):
         gook=False
         while not gook and it0<len(linst2)-1: #Search for starting point
             it0=it0+1
-            print(linst2[it0])
             refobj, gook =reftraj.find_inst(linst2[it0]) #Attention, delta t différent !!
-            fld = Inputs.extract_data(lfile[it0],linst[it0],indf,trackpar,domtraj,res[trackpar],basetime,subnproc)
-            lon,lat,val,dist,gook = Tools.find_locextr(signtrack,fld,refobj[0].lonc,refobj[0].latc)
-            gook = gook and(dist<=max_dist)
-            #print("Reference: ",linst[0],refobj[0].lonc,refobj[0].latc)
-            #print(gook,lon,lat,val,dist)
+            obj = refobj[0].search_core(lfile[it0],linst[it0],trackpar,Hn,indf,algo,domtraj,res,[],0,track_parameter,basetime,subnproc,diag_parameter,max_dist=max_dist)
 
         #------------------------------------------------------------------------------
                         # First step: Start the track from the closest point to reftraj
         #------------------------------------------------------------------------------
-        if gook:
+        if obj is not None:
             print("A starting point has been found at time : ",linst2[it0])
             #Creation of the track
             traj = DefTrack(algo.classobj,basetime=basetime)
             traj.name = reftraj.name
-            objectm0 = DefObject(algo.classobj, [], track_parameter,lonc=lon,latc=lat,time=linst2[it0])
-            Tools.make_diags(diag_parameter,objectm0,lfile[0],linst2[0],indf,domtraj,Hn,res,basetime,lon,lat,subnproc)
-            traj.add_obj(objectm0)
+            traj.add_obj(obj)
 
         #------------------------------------------------------------------------------
                                     # TIME LOOP
         #------------------------------------------------------------------------------
                                     
         it=it0
-
-        while gook and it<len(linst)-1:
+        while obj is not None and it<len(linst)-1:
             it = it + 1
             print("Looking for a point at instant ", linst[it])
             instm1=linst[it-1]
             inst=linst[it]
             objm1,fnd=traj.find_inst(instm1)
+            obj = objm1[0].search_core(lfile[it],linst[it],trackpar,Hn,indf,algo,domtraj,res,[],0,track_parameter,basetime,subnproc,diag_parameter,max_dist=max_dist)
 
-            fld = Inputs.extract_data(lfile[it],linst[it],indf,trackpar,domtraj,res[trackpar],basetime,subnproc)
-            lon,lat,val,dist,gook = Tools.find_locextr(signtrack,fld,objm1[0].lonc,objm1[0].latc)
-
-            gook=(dist<=max_dist)
-            if gook:
+            if obj is not None:
                 #CREATE POINT ON THE TRACK
-                objectm = DefObject(algo.classobj, [], track_parameter,lonc=lon,latc=lat,time=inst)
-
-                #DIAGNOSTIC PARAMETERS
-                Tools.make_diags(diag_parameter,objectm,lfile[it],linst[it],indf,domtraj,Hn,res,basetime,lon,lat,subnproc)
-                traj.add_obj(objectm)
+                print("A point has been found")
+                traj.add_obj(obj)
 
         if "traj" in locals():
             ltraj.append(traj)

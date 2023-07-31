@@ -279,6 +279,101 @@ class ObjectM:
 
         return tab
 
+            ## Some routines for object detection around a guess
+
+    def search_core(self,fic,inst,param,Hn,indf,algo,domtraj,res,parfilt,filtapply,track_parameter,basetime,subnproc,ldiag,**kwargs):
+        #Search core (local extremum) in field at a distance below dist_max and,
+        #if successful, creates the associated object
+        #Returns None if no valid detection
+        #Parameters:
+          #self: input object around which to search
+          #fic: file where to read parameter
+          #inst: instant
+          #param:field parameter
+          #Hn:Hemisphere
+          #indf,algo:inputdef,algodef
+          #domtraj:domain
+          #res: resolutions
+          #parfilt,filtapply: filtering parameters
+          #track_parameter
+          #basetime
+          #subnproc
+          #ldiag: if not [], computes the list of diagnostics in ldiag
+          #kwargs: criterions for detection
+                #max_dist:maximal distance where to search extremum
+                #ss:size of the square (degrees)
+                #thr_param:threshold on the value
+                #pairing : if this is a pairing parameter or not
+                #smooth: if smoothing is applied or not
+
+        #initialisation
+        trackpar, signtrack = Tools.get_parsign(param, Hn)
+        if filtapply==0:
+            filtrad=0.0
+        else:
+            filtrad=parfilt[trackpar]*filtapply
+        chk_dist=False
+        ss=1000
+        thr_track=Tools.maxval
+        max_dist=Tools.maxval
+        if "max_dist" in kwargs:
+            check_dist=True
+            max_dist=kwargs["max_dist"]
+        if "ss" in kwargs:
+            ss=kwargs["ss"]
+        if "thr_param" in kwargs:
+            thr_track=kwargs["thr_param"]
+        smooth=False
+        pairing=False
+        if "smooth" in kwargs:
+            smooth=kwargs["smooth"]
+        if "pairing" in kwargs:
+            pairing=kwargs["pairing"]
+
+        fld = Inputs.extract_data(fic,inst,indf,trackpar,domtraj,res[trackpar],basetime,subnproc,filtrad=filtrad)
+        lon,lat,val,dist,gook = Tools.find_locextr(signtrack,fld,self.lonc,self.latc,ss=ss,thr=thr_track)
+        #print(ss,thr_track)
+        #print(lon,lat,val,dist,gook)
+        #print(chk_dist,dist,max_dist)
+
+        if gook and ((not chk_dist) or (dist<=max_dist)):
+
+            if smooth:
+                lon, lat, val = Tools.smooth_extr(signtrack,fld,lon,lat)
+            #CREATE OBJECT
+            objectm = ObjectM([], track_parameter,lonc=lon,latc=lat,time=inst)
+            if trackpar in track_parameter:
+                objectm.traps[trackpar] = val
+
+            #DIAGNOSTIC PARAMETERS
+            if pairing:
+                Tools.make_diags(ldiag,objectm,fic,inst,indf,domtraj,Hn,res,basetime,self.lonc,self.latc,subnproc,parfilt=parfilt,filtapply=filtapply) #if ldiag is [], Tools.make_diag gets out quickly
+            else:
+                Tools.make_diags(ldiag,objectm,fic,inst,indf,domtraj,Hn,res,basetime,lon,lat,subnproc,parfilt=parfilt,filtapply=filtapply) #if ldiag is [], Tools.make_diag gets out quickly
+
+        else:
+            objectm=None
+
+        return objectm
+
+
+def search_allcores(fic,inst,indf,trackpar,signtrack,domtraj,res,basetime,track_parameter,subnproc,filtrad=0.0,dist=Tools.maxval, thr=Tools.maxval):
+    #Search for all objects in a domain
+    #that are at a minimal distance of radmax one to the other
+    #and above thr_core
+    #Output : list of objects
+
+    fld = Inputs.extract_data(fic,inst,indf,trackpar,domtraj,res,basetime,subnproc,filtrad=filtrad)
+    tlon, tlat, tval = Tools.find_allextr(signtrack, fld, dist=dist, thr=thr)
+    lobj=[]
+    for ivi in range(len(tlat)):
+        objectm = ObjectM([], track_parameter,lonc=tlon[ivi],latc=tlat[ivi],time=inst)
+        if trackpar in track_parameter:
+            objectm.traps[trackpar] = tval[ivi]
+        lobj.append(objectm)
+
+    return lobj
+
             ## Classe de la trajectoire de l'objet météorologique ##
 
 ''' La trajectoire est définie par une liste d'objet. Ces objets correspondent

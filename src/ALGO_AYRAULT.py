@@ -117,37 +117,20 @@ def track(algo,indf,linst,lfile,**kwargs):
         print(inst,lfile[it])
 
         #Finding all extremas
-        fld = Inputs.extract_data(lfile[it],linst[it],indf,trackpar,domtraj,res[trackpar],basetime,subnproc,filtrad=parfilt[trackpar]*filtapply)
-        tlon, tlat, tval = Tools.find_allextr(signtrack, fld, dist=radmax, thr=thr_core)
+        lobj = Search_allcores(algo.classobj,fic=lfile[it],inst=inst,indf=indf,trackpar=trackpar,signtrack=signtrack,domtraj=domtraj,res=res[trackpar],basetime=basetime,track_parameter=track_parameter,subnproc=subnproc,filtrad=parfilt[trackpar]*filtapply,dist=radmax, thr=thr_core)
 
         #Computation of steering flow parameters
-        u_steer1, v_steer1 = Tools.comp_steering(tlon,tlat,[lev1],uvmean_box,lfile[it],linst[it],indf,res,domtraj,basetime,parfilt,filtapply,subnproc)
-        u_steer2, v_steer2 = Tools.comp_steering(tlon,tlat,[lev2],uvmean_box,lfile[it],linst[it],indf,res,domtraj,basetime,parfilt,filtapply,subnproc)
-
-        #Creation of objects with input parameters
-        lobj=[]
-        for ivi in range(len(tlat)):
-            objectm = DefObject(algo.classobj, [], track_parameter,lonc=tlon[ivi],latc=tlat[ivi],time=inst)
-            objectm.traps[trackpar]=tval[ivi]
-            objectm.traps["u_steer1"] = u_steer1[ivi]
-            objectm.traps["v_steer1"] = v_steer1[ivi]
-            objectm.traps["u_steer2"] = u_steer2[ivi]
-            objectm.traps["v_steer2"] = v_steer2[ivi]
-            objectm.traps["Zqual"] = 0.0
-            objectm.traps["Isuiv"] = 0
-            lobj.append(objectm)
+        u_steer1, v_steer1 = Tools.comp_steering(lobj,[lev1],uvmean_box,lfile[it],inst,indf,res,domtraj,basetime,parfilt,filtapply,subnproc)
+        u_steer2, v_steer2 = Tools.comp_steering(lobj,[lev2],uvmean_box,lfile[it],inst,indf,res,domtraj,basetime,parfilt,filtapply,subnproc)
+        for ivi in range(len(lobj)):
+            lobj[ivi].traps["u_steer1"] = u_steer1[ivi]
+            lobj[ivi].traps["v_steer1"] = v_steer1[ivi]
+            lobj[ivi].traps["u_steer2"] = u_steer2[ivi]
+            lobj[ivi].traps["v_steer2"] = v_steer2[ivi]
+            lobj[ivi].traps["Zqual"] = 0.0
+            lobj[ivi].traps["Isuiv"] = 0
         
         dico_ker[str(it)] = lobj
-
-        #Checks
-        for ivi in range(len(tlat)):
-            for ivj in range(len(tlat)):
-                if (Tools.comp_length(tlon[ivi],tlat[ivi],tlon[ivj],tlat[ivj]) < radmax):
-                    if not(ivi==ivj):
-                        print("PROBLEM - ABORT")
-                        print(Tools.comp_length(tlon[ivi],tlat[ivi],tlon[ivj],tlat[ivj]))
-                        print(ivi,ivj,tlon[ivi],tlat[ivi],tlon[ivi],tlat[ivi])
-                        exit()
 
         #DEBUG - Plot champs et des points candidats (pour voir)
         if DEBUGGING:
@@ -271,13 +254,6 @@ def track(algo,indf,linst,lfile,**kwargs):
                         else:
                             zqualtot = zquald * zqualv * zquald1 * zquald2
 
-                        #zqualtot = zquald * zqualv #SKIP
-                        #print("ZQUAL:",zqualtot,zquald,zqualv)
-                        #print("ZQUAL-ACC:",zquald1,zquald2)
-
-                        #if zqualtot>0.0:
-                        #print("qual...",zqualtot, obj2.traps["Zqual"])
-
                         if (zqualtot > obj2.traps["Zqual"]): #On apparie obj2 a obj1
                             if DEBUGGING:
                                 print("Total quality:",zqualtot,zquald1*zquald2,)
@@ -298,12 +274,8 @@ def track(algo,indf,linst,lfile,**kwargs):
                     if (obj2.traps["Isuiv"] == obj1.traps["Isuiv"]) and (obj2.traps["Zqual"]>zq):
                         zq = obj2.traps["Zqual"]
                         objq = obj2
-                #print("Object no " + str(objq.traps["Isuiv"])+"/("+str(objq.lonc)+","+str(objq.latc)+\
-                #        ") has the highest quality at time ", linst[it+1], "with regards to Object no "\
-                #        + str(obj1.traps["Isuiv"])+"/("+str(obj1.lonc)+","+str(obj1.latc),") at time ", linst[it])
                 for obj2 in dico_ker[str(it+1)]:
                     if (obj2.traps["Isuiv"] == obj1.traps["Isuiv"]) and not (obj2==objq):
-                        #print("We skip no " + str(obj2.traps["Isuiv"])+"/("+str(obj2.lonc)+","+str(obj2.latc)+"), at time ", linst[it+1])
                         obj2.traps["Isuiv"] = 0
                         obj2.traps["Zqual"] = 0.0
 
@@ -333,10 +305,6 @@ def track(algo,indf,linst,lfile,**kwargs):
                 if obj2.traps["Isuiv"]==0:
                     nsuiv = nsuiv + 1
                     obj2.traps["Isuiv"]=nsuiv
-
-            #dump
-            #for obj in dico_ker[str(it)]:
-            #        print(obj.__dict__)
 
             it = it + 1
 
@@ -371,46 +339,28 @@ def track(algo,indf,linst,lfile,**kwargs):
             print("Max value along the track: "+str(maxv))
             print("Duration (h) of the track: "+str(traj.tlen(unit="h")))
             if blen and bmax:
+                traj2=DefTrack(algo.classobj,basetime=basetime)
                 inam=inam+1
                 #Give name to traj
-                traj.name="AY-"+basetime+ '-' +str(inam)
-                #Correction of position if a mslp minimum is found
+                traj2.name="AY-"+basetime+ '-' +str(inam)
+                #Correction of position if a mslp minimum is found - Computation of diagnostics
                 for obj in traj.traj:
                     it = Tools.get_time_index(linst,obj.time)
-                    olon=obj.lonc
-                    olat=obj.latc
-                    #print("time found: ",obj.time,it,linst[it],lfile[it])
                     if not pairpar == "":
-                        lon,lat,val,gook = search_pairing(pairpar,signpair,thr_pairing,ss,obj.lonc,obj.latc,lfile[it],linst[it],indf,domtraj,res,basetime,parfilt,filtapply,subnproc)
-                        if gook:
-                            obj.lonc = lon
-                            obj.latc = lat
-                        #if pairpar in diag_parameter: #Add pairing diagnostic in traj #Depreciated
-                        #    obj.diags.append(pairpar)
-                        #    setattr(obj,pairpar,val)
+                        obj_pair = obj.search_core(lfile[it],linst[it],pairpar,Hn,indf,algo,domtraj,res,parfilt,filtapply,track_parameter,basetime,subnproc,diag_parameter,ss=ss,thr_param=thr_pairing,pairing=True,smooth=True)
 
-                    Tools.make_diags(diag_parameter,obj,lfile[it],linst[it],indf,domtraj,Hn,res,basetime,olon,olat,subnproc,parfilt=parfilt,filtapply=filtapply) #Add diagnostics in traj
+                        if obj_pair is not None:
+                            obj_pair.traps[trackpar] = obj.traps[trackpar]
+                            traj2.add_obj(obj_pair)
+                        else:
+                            Tools.make_diags(diag_parameter,obj,lfile[it],linst[it],indf,domtraj,Hn,res,basetime,obj.lonc,obj.latc,subnproc,parfilt=parfilt,filtapply=filtapply) #Add diagnostics in traj
+                            traj2.add_obj(obj)
+                    else:
+                        Tools.make_diags(diag_parameter,obj,lfile[it],linst[it],indf,domtraj,Hn,res,basetime,obj.lonc,obj.latc,subnproc,parfilt=parfilt,filtapply=filtapply) #Add diagnostics in traj
+                        traj2.add_obj(obj)
 
-                ltraj.append(traj)
+
+                ltraj.append(traj2)
 
     return ltraj
-
-def search_pairing(pairpar,signpair,thr_pairing,ss,lon0,lat0,filin,inst,indf,domtraj,res,basetime,parfilt,filtapply,subnproc):
-    #Search the closest mslp relative min from the position lon0, lat0
-
-    lon=missval
-    lat=missval
-
-    fldb = Inputs.extract_data(filin,inst,indf,pairpar,domtraj,res[pairpar],basetime,subnproc,filtrad=parfilt[pairpar]*filtapply)
-
-    lon,lat,val,dist,gook2 = Tools.find_locextr(signpair,fldb,lon0,lat0,ss=ss,thr=thr_pairing)
-
-    if gook2:
-        #LISSAGE DU MINIMA (AVEC  PROCHES VOISIN DE lon,lat)
-        lon, lat, val = Tools.smooth_extr(signpair,fldb,lon,lat)
-    else:
-        val=missval
-
-    return lon,lat,val,gook2
-
 

@@ -68,6 +68,15 @@ def DefTrack(classobj,**kwargs):
 
     return track_cls(**kwargs)
 
+def Search_allcores(classobj,**kwargs):
+
+    #L'importation du module convenable
+    module = __import__("OBJ_"+classobj)
+
+    search_allcores = getattr(module,"search_allcores")
+
+    return search_allcores(**kwargs)
+
 def PrepareFiles(algo,indf,dirkeys,timetraj,**kwargs):
     #Same input arguments as track (algo, indf, timetraj + termtraj if fc)
     #dirkeys: {"vortex"="", --> where data should be downloaded through vortex first (=$MTOOLDIR)
