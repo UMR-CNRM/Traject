@@ -651,6 +651,34 @@ def comp_length(lon1, lat1, lon2, lat2):
 
     return (r/1000.0)*np.arccos(ab)
 
+def comp_deriv(fld,lon,lat,ss,domtraj):
+    #Computes derivative of fld in the 4 directions at a distance of ss(degrees)
+    #If the distance gets out of the domain, we compute the derivative at the frontier
+    #Output : list of 4 derivative values
+
+    deriv=[]
+    #East
+    if abs(domtraj["lonmax"]-lon)>ss:
+        deriv.append(fld.getvalue_ll(lon+ss,lat)-fld.getvalue_ll(lon,lat))
+    else:
+        deriv.append((fld.getvalue_ll(domtraj["lonmax"],lat)-fld.getvalue_ll(lon,lat))*(ss/abs(domtraj["lonmax"]-lon)))
+    #West
+    if abs(domtraj["lonmin"]-lon)>ss:
+        deriv.append(fld.getvalue_ll(lon+ss,lat)-fld.getvalue_ll(lon,lat))
+    else:
+        deriv.append((fld.getvalue_ll(domtraj["lonmin"],lat)-fld.getvalue_ll(lon,lat))*(ss/abs(domtraj["lonmin"]-lon)))
+    #North
+    if abs(domtraj["latmax"]-lat)>ss:
+        deriv.append(fld.getvalue_ll(lon,lat+ss)-fld.getvalue_ll(lon,lat))
+    else:
+        deriv.append((fld.getvalue_ll(lon,domtraj["latmax"])-fld.getvalue_ll(lon,lat))*(ss/abs(domtraj["latmax"]-lat)))
+    #South
+    if abs(domtraj["latmin"]-lat)>ss:
+        deriv.append(fld.getvalue_ll(lon,lat-ss)-fld.getvalue_ll(lon,lat))
+    else:
+        deriv.append((fld.getvalue_ll(lon,domtraj["latmin"])-fld.getvalue_ll(lon,lat))*(ss/abs(domtraj["latmin"]-lat)))
+
+    return deriv
 #--------------------------------------------------------------------------#
 def get_res(fld):
     #Input : an epygram field on a regular latlon grid

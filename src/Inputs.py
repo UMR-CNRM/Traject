@@ -182,6 +182,24 @@ class inputdef():
             elif str(param) == 'v850':
                 dict = {'parameterCategory': 2, 'parameterNumber': 3,
                         'typeOfFirstFixedSurface':100, 'level': 850}
+            elif str(param) == 't500':
+                dict = {'parameterCategory': 0, 'parameterNumber': 0,
+                        'typeOfFirstFixedSurface':100, 'level': 500}
+            elif str(param) == 't400':
+                dict = {'parameterCategory': 0, 'parameterNumber': 0,
+                        'typeOfFirstFixedSurface':100, 'level': 400}
+            elif str(param) == 't300':
+                dict = {'parameterCategory': 0, 'parameterNumber': 0,
+                        'typeOfFirstFixedSurface':100, 'level': 300}
+            elif str(param) == 't200':
+                dict = {'parameterCategory': 0, 'parameterNumber': 0,
+                        'typeOfFirstFixedSurface':100, 'level': 200}
+            elif str(param) == 'z200':
+                dict = {'parameterCategory': 3, 'parameterNumber': 4,
+                        'typeOfFirstFixedSurface':100, 'level': 200}
+            elif str(param) == 'z1000':
+                dict = {'parameterCategory': 3, 'parameterNumber': 4,
+                        'typeOfFirstFixedSurface':100, 'level': 1000}
             elif str(param) == 'u10m':
                 dict = {'parameterCategory':2,'parameterNumber':2,'typeOfFirstFixedSurface': 103,
                         'typeOfSecondFixedSurface':255,'level':10}
@@ -386,6 +404,9 @@ class algodef():
         #Parallel options (optional)
         self.parallel={}
 
+        #Condition type options (optional)
+        self.conditiontype=None
+
         #Special field options (optional, depends on the algorithm)
         self.specfields=None
 
@@ -509,7 +530,10 @@ def split_param(param):
         lev=param[2:5]
     elif param[0:1]=="t":
         par="t"
-        lev=param[1:4]
+        lev=param[1:]
+    elif param[0:1]=="z":
+        par="z"
+        lev=param[1:]
     elif param in ["mslp","btir"] or param[0:2]=="rr":
         par=param
         lev=""

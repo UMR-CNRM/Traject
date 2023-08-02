@@ -69,6 +69,8 @@ class ObjectM:
         else:
             self.time = str(missval)
 
+        self.nameobj=""
+
         # Diagnostics (optionnal)
         self.diags=ldiag
 
@@ -103,7 +105,10 @@ class ObjectM:
         t = self.time
 
         # Récuperation des attributs de définition
-        dico = {'lonc': self.lonc, 'latc': self.latc}
+        if self.nameobj=="":
+            dico = {'lonc': self.lonc, 'latc': self.latc}
+        else:
+            dico = {'lonc': self.lonc, 'latc': self.latc, 'nameobj':self.nameobj}
         if "diags" in vars(self)>0 and write_diag:
             dico["diags"]=self.diags
             for diag in self.diags:
@@ -137,6 +142,8 @@ class ObjectM:
                 obj.time=t
                 obj.latc=latc
                 obj.lonc=lonc
+                if "nameobj" in dico:
+                    obj.nameobj=dico[1]['nameobj']
                 for diag in ldiag:
                     setattr(obj,diag,dico[1][diag])
         self = obj
@@ -332,9 +339,6 @@ class ObjectM:
 
         fld = Inputs.extract_data(fic,inst,indf,trackpar,domtraj,res[trackpar],basetime,subnproc,filtrad=filtrad)
         lon,lat,val,dist,gook = Tools.find_locextr(signtrack,fld,self.lonc,self.latc,ss=ss,thr=thr_track)
-        #print(ss,thr_track)
-        #print(lon,lat,val,dist,gook)
-        #print(chk_dist,dist,max_dist)
 
         if gook and ((not chk_dist) or (dist<=max_dist)):
 
@@ -346,33 +350,92 @@ class ObjectM:
                 objectm.traps[trackpar] = val
 
             #DIAGNOSTIC PARAMETERS
+                #if ldiag is [], Tools.make_diag gets out quickly
             if pairing:
-                Tools.make_diags(ldiag,objectm,fic,inst,indf,domtraj,Hn,res,basetime,self.lonc,self.latc,subnproc,parfilt=parfilt,filtapply=filtapply) #if ldiag is [], Tools.make_diag gets out quickly
+                Tools.make_diags(ldiag,objectm,fic,inst,indf,domtraj,Hn,res,basetime,self.lonc,self.latc,subnproc,parfilt=parfilt,filtapply=filtapply)
             else:
-                Tools.make_diags(ldiag,objectm,fic,inst,indf,domtraj,Hn,res,basetime,lon,lat,subnproc,parfilt=parfilt,filtapply=filtapply) #if ldiag is [], Tools.make_diag gets out quickly
+                Tools.make_diags(ldiag,objectm,fic,inst,indf,domtraj,Hn,res,basetime,lon,lat,subnproc,parfilt=parfilt,filtapply=filtapply)
 
         else:
             objectm=None
 
         return objectm
 
+    def conditiontype(self,fic,inst,indf,algo,domtraj,res,parfilt,filtapply,basetime,subnproc,init=False):
+        #Determines if the object satisfies a condition type
+        #init : if it is the first obj in the track
+        #Output : isok (True is the object is of the type)
+        #(in that case nameobj takes algo.conditiontype.nameobj value)
+        #Output : exclude, if the object has to be removed from the track
 
-def search_allcores(fic,inst,indf,trackpar,signtrack,domtraj,res,basetime,track_parameter,subnproc,filtrad=0.0,dist=Tools.maxval, thr=Tools.maxval):
-    #Search for all objects in a domain
-    #that are at a minimal distance of radmax one to the other
-    #and above thr_core
-    #Output : list of objects
+        isok=True
+        exclude=False
+        if algo.conditiontype is not None:
+            if "casetype" in algo.conditiontype:
+                if algo.conditiontype["casetype"]=="TCVitart97":
+                    if (not algo.conditiontype["when"]=="init") or init==True:
+                        print("Test condition "+algo.conditiontype["casetype"])
+                        print("... a tropical cyclone - "+algo.conditiontype["nameobj"]+" - criterion based on t200-t300-t400-t500, z200 and z1000 fields")
 
-    fld = Inputs.extract_data(fic,inst,indf,trackpar,domtraj,res,basetime,subnproc,filtrad=filtrad)
-    tlon, tlat, tval = Tools.find_allextr(signtrack, fld, dist=dist, thr=thr)
-    lobj=[]
-    for ivi in range(len(tlat)):
-        objectm = ObjectM([], track_parameter,lonc=tlon[ivi],latc=tlat[ivi],time=inst)
-        if trackpar in track_parameter:
-            objectm.traps[trackpar] = tval[ivi]
-        lobj.append(objectm)
+                        #Pameters
+                        if abs(domtraj["lonmax"]-self.lonc)>3.0:
+                            distmax=Tools.comp_length(self.lonc,self.latc,self.lonc+2.0,self.latc) #Distance (en km) de 2deg de longtitude
+                        else:
+                            distmax=Tools.comp_length(self.lonc,self.latc,self.lonc-2.0,self.latc) #Distance (en km) de 2deg de longtitude
+                        dt = -0.5 #derivative criterion on temperature
+                        dz = -500 #derivative criterion on thickness (500 mgp)
 
-    return lobj
+                        #Extraction of fields
+                        t200 = Inputs.extract_data(fic,inst,indf,"t200",domtraj,res["t200"],basetime,subnproc,filtrad=parfilt["t200"]*filtapply)
+                        t300 = Inputs.extract_data(fic,inst,indf,"t300",domtraj,res["t300"],basetime,subnproc,filtrad=parfilt["t300"]*filtapply)
+                        t400 = Inputs.extract_data(fic,inst,indf,"t400",domtraj,res["t400"],basetime,subnproc,filtrad=parfilt["t400"]*filtapply)
+                        t500 = Inputs.extract_data(fic,inst,indf,"t500",domtraj,res["t500"],basetime,subnproc,filtrad=parfilt["t500"]*filtapply)
+
+                        #Computation of warm core criterion
+                        tmean=t200
+                        tmean.operation('+',t300)
+                        tmean.operation('+',t400)
+                        tmean.operation('+',t500)
+                        tmean.operation("/",4)
+
+                        lon,lat,val,dist,gook = Tools.find_locextr(1,tmean,self.lonc,self.latc,ss=4,thr=0.0)
+                        if gook and (dist<distmax):
+                            #Derivative criterion
+                            deriv = Tools.comp_deriv(tmean,self.lonc,self.latc,8,domtraj)
+                            if deriv[0]<dt and deriv[1]<dt and deriv[2]<dt and deriv[3]<dt:
+                                isok=True
+                            else:
+                                isok=False
+                        else:
+                            isok=False
+
+                        #Computation of geopotential criterion (if isok)
+                        if isok:
+                            z200 = Inputs.extract_data(fic,inst,indf,"z200",domtraj,res["z200"],basetime,subnproc,filtrad=parfilt["z200"]*filtapply)
+                            z1000 = Inputs.extract_data(fic,inst,indf,"z1000",domtraj,res["z1000"],basetime,subnproc,filtrad=parfilt["z1000"]*filtapply)
+                            z200.operation('-',z1000) #thickness
+                            lon,lat,val,dist,gook = Tools.find_locextr(1,z200,self.lonc,self.latc,ss=4,thr=0.0)
+                            if gook and (dist<distmax):
+                                #Derivative criterion
+                                deriv = Tools.comp_deriv(z200,self.lonc,self.latc,8,domtraj)
+                                if deriv[0]<dz and deriv[1]<dz and deriv[2]<dz and deriv[3]<dz:
+                                    isok=True
+                                else:
+                                    isok=False
+                            else:
+                                isok=False
+                    #Consequences of isok: exclude, self.nameobj
+                    if isok:
+                        self.nameobj=algo.conditiontype["nameobj"]
+                    if algo.conditiontype["exclude"]=="True" and not isok:
+                        exclude=True
+                else:
+                    print(algo.conditiontype["casetype"] + " is not a valid condition type - Not applied")
+            else:
+                print("condition type does not apply - declare casetype in algo")
+                exit()
+
+        return isok, exclude
 
             ## Classe de la trajectoire de l'objet météorologique ##
 
@@ -512,7 +575,10 @@ class Track:
             t = obj.time
             
             # Récuperation des attributs de définition
-            dico = {'lonc': obj.lonc, 'latc': obj.latc}
+            if obj.nameobj=="":
+                dico = {'lonc': obj.lonc, 'latc': obj.latc}
+            else:
+                dico = {'lonc': obj.lonc, 'latc': obj.latc, 'nameobj':obj.nameobj}
             if "diags" in vars(obj) and write_diag:
                 dico["diags"]=obj.diags
                 for diag in obj.diags:
@@ -529,7 +595,6 @@ class Track:
         '''Reads the track from input dictionary (including diags)
         '''
 
-        #print(dictin.items())
         for dico in dictin.items():
             diconame = dico[0]
             if diconame[0:4]=="time":
@@ -540,12 +605,13 @@ class Track:
                 del ldiag['latc']
                 del ldiag['lonc']
                 obj = ObjectM(ldiag,[],lonc=lon0,latc=lat0,time=t0)
+                if "nameobj" in dico:
+                    obj.nameobj=dico[1]['nameobj']
                 if len(ldiag)>0:
                     obj.diags=ldiag
                     for diag in ldiag:
                         setattr(obj,diag,dico[1][diag])
                 self.add_obj(obj)
-                #print(obj.__dict__)
 
 
     def plot(self, ax):
@@ -603,3 +669,23 @@ class Track:
                     val = vect[3*ivi+2] 
 
         return val
+
+#Some routines
+def search_allcores(fic,inst,indf,trackpar,signtrack,domtraj,res,basetime,track_parameter,subnproc,filtrad=0.0,dist=Tools.maxval, thr=Tools.maxval):
+    #Search for all objects in a domain
+    #that are at a minimal distance of radmax one to the other
+    #and above thr_core
+    #Output : list of objects
+
+    fld = Inputs.extract_data(fic,inst,indf,trackpar,domtraj,res,basetime,subnproc,filtrad=filtrad)
+    tlon, tlat, tval = Tools.find_allextr(signtrack, fld, dist=dist, thr=thr)
+    lobj=[]
+    for ivi in range(len(tlat)):
+        objectm = ObjectM([], track_parameter,lonc=tlon[ivi],latc=tlat[ivi],time=inst)
+        if trackpar in track_parameter:
+            objectm.traps[trackpar] = tval[ivi]
+        lobj.append(objectm)
+
+    return lobj
+
+

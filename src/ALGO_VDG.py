@@ -101,15 +101,18 @@ def track(algo,indf,linst,lfile,**kwargs):
         it0=-1
         gook=False
         obj2=None
+        exclude=False
         while not gook and it0<len(linst2)-1:
             it0=it0+1
+            print(it0)
             refobj, gook1 =reftraj.find_inst(linst2[it0]) #Attention, delta t différent !!
             if gook1: # Tracking main core
                 obj = refobj[0].search_core(lfile[it0],linst[it0],trackpar,Hn,indf,algo,domtraj,res,parfilt,filtapply,track_parameter,basetime,subnproc,[],ss=ss,thr_param=thr_track)
                 obj2 = None
                 if obj is not None: # Pairing
                     obj2 = obj.search_core(lfile[it0],linst[it0],pairpar,Hn,indf,algo,domtraj,res,parfilt,filtapply,track_parameter,basetime,subnproc,diag_parameter,ss=ss,thr_param=thr_pair,pairing=True,smooth=True)
-            gook = obj is not None and obj2 is not None
+                    isok, exclude = obj2.conditiontype(lfile[it0],linst[it0],indf,algo,domtraj,res,parfilt,filtapply,basetime,subnproc,init=True)
+            gook = obj is not None and obj2 is not None and not exclude
 
         if gook: #A 
             #Creation of the track
@@ -130,13 +133,14 @@ def track(algo,indf,linst,lfile,**kwargs):
             obj2.traps["v_speed"] = v_steer
             obj2.traps[trackpar] = obj.traps[trackpar]
 
+            print(obj2.nameobj)
             traj.add_obj(obj2)
 
         #------------------------------------------------------------------------------
                                     # TIME LOOP
         #------------------------------------------------------------------------------
         it=it0
-        gook= obj2 is not None
+        gook= obj2 is not None and not exclude
 
         while gook and it<len(linst)-1 and Inputs.check_file(lfile[it+1],indf,trackpar,trackpar):
             it = it + 1
@@ -155,7 +159,8 @@ def track(algo,indf,linst,lfile,**kwargs):
             obj2 = None
             if obj is not None: # Pairing
                 obj2 = obj.search_core(lfile[it],linst[it],pairpar,Hn,indf,algo,domtraj,res,parfilt,filtapply,track_parameter,basetime,subnproc,diag_parameter,ss=ss,thr_param=thr_pair,pairing=True,smooth=True)
-            gook = obj is not None and obj2 is not None
+                isok, exclude = obj2.conditiontype(lfile[it],linst[it],indf,algo,domtraj,res,parfilt,filtapply,basetime,subnproc,init=False)
+            gook = obj is not None and obj2 is not None and not exclude
 
             if gook:
                 #Initialisations of obj2 variables and addition to traj
