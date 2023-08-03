@@ -679,11 +679,33 @@ def open_field(filename,inst,indf,param):
     gook, filename2, epyfmt = check_file(filename,indf,par0,param0)
 
     if gook and epyfmt=="GRIB":
-        f1 = epygram.formats.resource(filename=filename2,openmode="r",fmt = epyfmt)
-        f1.open()
-        fs = f1.readfield(indf.get_ecdico(par0+lev))
-        #We assume here that there is only one instant in the grib file ...
-        #if it is not the case, some adaptation is required
+        
+        #Test gribs eclates ou non (specific Meteo-France)
+        with open(filename2,'rb') as fd:
+            rc = fd.read(7) == b'file://'
+
+        if rc: #Grib eclate
+            fd=open(filename2,'r')
+            readok=False
+            while not readok:
+
+                fname3=fd.readline().replace("file://","").rstrip()
+                f1 = epygram.formats.resource(filename=fname3,openmode="r",fmt = epyfmt)
+                f1.open()
+                try:
+                    fs = f1.readfield(indf.get_ecdico(par0+lev))
+                except:
+                    readok=False
+                    #print("field "+par0+lev+" not in "+fname3+" ... skip to next file")
+                else:
+                    #print("field "+par0+lev+" found in "+fname3)
+                    readok=True
+            fd.close()
+
+        else: #Regular grib
+            f1 = epygram.formats.resource(filename=filename2,openmode="r",fmt = epyfmt)
+            f1.open()
+            fs = f1.readfield(indf.get_ecdico(par0+lev))
 
     elif gook and epyfmt=="netCDF":
 
