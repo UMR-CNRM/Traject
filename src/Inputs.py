@@ -161,6 +161,9 @@ class inputdef():
             elif str(param) == 'av850': #Absolute vorticity at 850hPa
                 dict = {'parameterCategory': 2, 'parameterNumber': 10,
                         'typeOfFirstFixedSurface':100, 'level': 850}
+            elif str(param) == 'rv850': #Relative vorticity at 850hPa
+                dict = {'parameterCategory': 2, 'parameterNumber': 12,
+                        'typeOfFirstFixedSurface':100, 'level': 850}
             elif str(param) == 'u500': #1st Horizontal component of wind at 500hPa
                 dict = {'parameterCategory': 2, 'parameterNumber': 2,
                         'typeOfFirstFixedSurface':100, 'level': 500}
@@ -179,6 +182,24 @@ class inputdef():
             elif str(param) == 'v850':
                 dict = {'parameterCategory': 2, 'parameterNumber': 3,
                         'typeOfFirstFixedSurface':100, 'level': 850}
+            elif str(param) == 't500':
+                dict = {'parameterCategory': 0, 'parameterNumber': 0,
+                        'typeOfFirstFixedSurface':100, 'level': 500}
+            elif str(param) == 't400':
+                dict = {'parameterCategory': 0, 'parameterNumber': 0,
+                        'typeOfFirstFixedSurface':100, 'level': 400}
+            elif str(param) == 't300':
+                dict = {'parameterCategory': 0, 'parameterNumber': 0,
+                        'typeOfFirstFixedSurface':100, 'level': 300}
+            elif str(param) == 't200':
+                dict = {'parameterCategory': 0, 'parameterNumber': 0,
+                        'typeOfFirstFixedSurface':100, 'level': 200}
+            elif str(param) == 'z200':
+                dict = {'parameterCategory': 3, 'parameterNumber': 4,
+                        'typeOfFirstFixedSurface':100, 'level': 200}
+            elif str(param) == 'z1000':
+                dict = {'parameterCategory': 3, 'parameterNumber': 4,
+                        'typeOfFirstFixedSurface':100, 'level': 1000}
             elif str(param) == 'u10m':
                 dict = {'parameterCategory':2,'parameterNumber':2,'typeOfFirstFixedSurface': 103,
                         'typeOfSecondFixedSurface':255,'level':10}
@@ -383,8 +404,14 @@ class algodef():
         #Parallel options (optional)
         self.parallel={}
 
+        #Condition type options (optional)
+        self.conditiontype=None
+
         #Special field options (optional, depends on the algorithm)
         self.specfields=None
+
+        if not namelist=="": #Builds from the namelist if it is provided
+            self.read_input(namelist)
 
     def update_input(self,dico):
         #Updates the self objects with the keys and values in the dictionary dico
@@ -503,7 +530,10 @@ def split_param(param):
         lev=param[2:5]
     elif param[0:1]=="t":
         par="t"
-        lev=param[1:4]
+        lev=param[1:]
+    elif param[0:1]=="z":
+        par="z"
+        lev=param[1:]
     elif param in ["mslp","btir"] or param[0:2]=="rr":
         par=param
         lev=""
@@ -608,6 +638,9 @@ def read_nc(f1,inst,parnc,levnc):
         elif not single_time:
             print("Extraction of data at time " + str(times[indt[0]]))
             fs = f1.readfield(parnc,only={timename:indt[0]},adhoc_behaviour=adhb)
+        elif not single_level:
+            print("Extraction of data at level " + str(levels[indl[0]]))
+            fs = f1.readfield(parnc,only={levname:indl[0]},adhoc_behaviour=adhb)
         else:
             print("Extraction of data")
             fs = f1.readfield(parnc)
@@ -646,11 +679,33 @@ def open_field(filename,inst,indf,param):
     gook, filename2, epyfmt = check_file(filename,indf,par0,param0)
 
     if gook and epyfmt=="GRIB":
-        f1 = epygram.formats.resource(filename=filename2,openmode="r",fmt = epyfmt)
-        f1.open()
-        fs = f1.readfield(indf.get_ecdico(par0+lev))
-        #We assume here that there is only one instant in the grib file ...
-        #if it is not the case, some adaptation is required
+        
+        #Test gribs eclates ou non (specific Meteo-France)
+        with open(filename2,'rb') as fd:
+            rc = fd.read(7) == b'file://'
+
+        if rc: #Grib eclate
+            fd=open(filename2,'r')
+            readok=False
+            while not readok:
+
+                fname3=fd.readline().replace("file://","").rstrip()
+                f1 = epygram.formats.resource(filename=fname3,openmode="r",fmt = epyfmt)
+                f1.open()
+                try:
+                    fs = f1.readfield(indf.get_ecdico(par0+lev))
+                except:
+                    readok=False
+                    #print("field "+par0+lev+" not in "+fname3+" ... skip to next file")
+                else:
+                    #print("field "+par0+lev+" found in "+fname3)
+                    readok=True
+            fd.close()
+
+        else: #Regular grib
+            f1 = epygram.formats.resource(filename=filename2,openmode="r",fmt = epyfmt)
+            f1.open()
+            fs = f1.readfield(indf.get_ecdico(par0+lev))
 
     elif gook and epyfmt=="netCDF":
 
@@ -686,7 +741,7 @@ def extract_field(filename,inst,indf,lfields,filout):
 
     return
 
-def filter_field(filename,inst,indf,filt_var,domtraj,dres,repout,basetime,filesuf):
+def filter_field(filename,inst,indf,filt_var,domtraj,dres,repout,basetime,filesuf,subnproc):
     #filter the fields at scale (km) given in filt_var and extracts on domtraj
     #at resolution given by dres (for every parameter)
     #the list_var variables from filename at instant inst
@@ -707,7 +762,7 @@ def filter_field(filename,inst,indf,filt_var,domtraj,dres,repout,basetime,filesu
             ivi=ivi+1
 
         ic=fileres.index(dres[var])
-        fld = extract_data(filename,inst,indf,var,domtraj,dres[var],basetime,filteff)
+        fld = extract_data(filename,inst,indf,var,domtraj,dres[var],basetime,subnproc,filteff)
         fld.fid['netCDF'] = var
         rout[ic].writefield(fld)
         param_file[var]=str(dres[var]).replace('.','p')
@@ -719,7 +774,7 @@ def filter_field(filename,inst,indf,filt_var,domtraj,dres,repout,basetime,filesu
     return param_file, param_nc
 
 
-def extract_data(filename,inst,indf,param,domtraj,res,basetime,filtrad=0):
+def extract_data(filename,inst,indf,param,domtraj,res,basetime,subnproc,filtrad=0):
     '''
     Extracts data from filename that corresponds to:
     - instant inst,
@@ -727,6 +782,7 @@ def extract_data(filename,inst,indf,param,domtraj,res,basetime,filtrad=0):
     - on the grid given by domtraj (boundaries) and res (resolution),
     given the definition of input data as in indf.
 
+    subnproc: number of cores used for pyresample
     If filtrad is declared and if it is >0, then smoothing is applied
     at the equivalent resolution of filtrad (in km).
 
@@ -759,17 +815,17 @@ def extract_data(filename,inst,indf,param,domtraj,res,basetime,filtrad=0):
 
     #Special case: wind module ff is computed from u and v
     if par=="ff" and "ff_uv" in indf.special_keys:
-        fs = comp_ff(par,lev,indf,inst,basetime,domtraj,res,filtrad)
+        fs = comp_ff(par,lev,indf,inst,basetime,domtraj,res,filtrad,subnproc)
 
     #Special case: decumulate rain rate
     rrdecum, rrbefore = ifdecum(indf)
     if rrdecum and par[0:2]=="rr" and len(par)>2:
-        fs = comp_rr(par,indf,inst,basetime,domtraj,res,filtrad)
+        fs = comp_rr(par,indf,inst,basetime,domtraj,res,subnproc,filtrad)
 
     #If there is no change of resolution nor smoothing --> extract subdomain
     if filtrad<1e-6 and abs(res0-res)<1e-6:
         fld=fs.resample_on_regularll({"lonmin":domtraj["lonmin"],"latmin":domtraj["latmin"],
-        "lonmax":domtraj["lonmax"],"latmax":domtraj["latmax"]},res)
+        "lonmax":domtraj["lonmax"],"latmax":domtraj["latmax"]},res, nprocs=subnproc)
     else:
     #There is some change of resolution or smoothing --> resampling
         if filtrad>1e-6:
@@ -780,7 +836,7 @@ def extract_data(filename,inst,indf,param,domtraj,res,basetime,filtrad=0):
             ngb = int((res/res0)*(res/res0)*(filtrad2/(res*100))*(filtrad2/(res*100))*4)+1
         fld=fs.resample_on_regularll({"lonmin":domtraj["lonmin"],"latmin":domtraj["latmin"],
         "lonmax":domtraj["lonmax"],"latmax":domtraj["latmax"]},res,weighting='gauss',
-                radius_of_influence=filtrad2*1e3,neighbours=ngb,sigma=(filtrad2/2.0)*1e3, reduce_data=True)
+                radius_of_influence=filtrad2*1e3,neighbours=ngb,sigma=(filtrad2/2.0)*1e3, reduce_data=True, nprocs=subnproc)
 
     return fld
 
@@ -849,7 +905,7 @@ def ifdecum(indf):
 
     return rrdecum, rrbefore
 
-def comp_rr(parname,indf,inst,basetime,domtraj,res,filtrad):
+def comp_rr(parname,indf,inst,basetime,domtraj,res,subnproc,filtrad):
     #Decumulates rainfall according to parname and indf data at instant inst
     #if rr_after in indf.special_keys then the difference is done after inst,
     #else it is done before inst (default option)
@@ -883,12 +939,12 @@ def comp_rr(parname,indf,inst,basetime,domtraj,res,filtrad):
                 fname2=indf.get_filename(basetime,t2)   
                 #print(fname1, inst1, t1)
                 #print(fname2, inst2, t2)
-                f1=extract_data(fname1,inst1,indf,'rr',domtraj,res,filtrad)
-                f2=extract_data(fname2,inst2,indf,'rr',domtraj,res,filtrad)
+                f1=extract_data(fname1,inst1,indf,'rr',domtraj,res,subnproc,filtrad)
+                f2=extract_data(fname2,inst2,indf,'rr',domtraj,res,subnproc,filtrad)
                 f2.operation("-",f1)
             else:
                 fname2=indf.get_filename(basetime,t2)   
-                f2=extract_data(fname2,inst2,indf,'rr',domtraj,res,filtrad)
+                f2=extract_data(fname2,inst2,indf,'rr',domtraj,res,subnproc,filtrad)
         else:
             print("Fatal error in Inputs.comp_rr(): rain decumulation works only on forecasts")
             print("You may remove "+ indf.special_keys +" key to process without decumulation")
@@ -901,11 +957,11 @@ def comp_rr(parname,indf,inst,basetime,domtraj,res,filtrad):
         exit()
         #t2 = int(((inst-btime).seconds)/3600)
         #fname2=indf.get_filename(basetime,t2)   
-        #f2=extract_data(fname2,inst,indf,'rr',domtraj,res,filtrad)
+        #f2=extract_data(fname2,inst,indf,'rr',domtraj,res,subnproc,filtrad)
 
     return f2
 
-def comp_ff(parname,lev,indf,inst,basetime,domtraj,res,filtrad):
+def comp_ff(parname,lev,indf,inst,basetime,domtraj,res,filtrad,subnproc):
     #Computes wind module (ff) from u and v
     #if ff_uv in indf.special_keys
 
@@ -914,8 +970,8 @@ def comp_ff(parname,lev,indf,inst,basetime,domtraj,res,filtrad):
     #print("Filter= ", filtrad, " Resolution: ",res)
 
     fname1=indf.get_filename(basetime,term)
-    uf=extract_data(fname1,inst,indf,'u'+lev,domtraj,res,filtrad)
-    vf=extract_data(fname1,inst,indf,'v'+lev,domtraj,res,filtrad)
+    uf=extract_data(fname1,inst,indf,'u'+lev,domtraj,res,subnproc,filtrad)
+    vf=extract_data(fname1,inst,indf,'v'+lev,domtraj,res,subnproc,filtrad)
 
     wind = epygram.fields.make_vector_field(uf,vf)
     ff = wind.to_module()

@@ -51,6 +51,12 @@ def init_algo(algo,indf,linst,lfile,**kwargs):
         domtraj, res, lons, lats = Inputs.extract_domain(lfile[0],linst[0],indf,varname[0]) #domtraj is the total grid
     else:
         domtraj=algo.domtraj
+    
+    #subnproc
+    subnproc=1
+    if algo.parallel is not None:
+        if "subnproc" in algo.parallel:
+            subnproc=algo.parallel["subnproc"]
 
     #Compute dictionary of resolutions
     dres = get_parres(algo,indf,lfile[0],linst[0])
@@ -85,12 +91,13 @@ def init_algo(algo,indf,linst,lfile,**kwargs):
         rd=traject.missval
     for diagname in algo.diag_parameter:
         if diagname==pairpar and not pairpar=="": #Special case to diagnose pairpar
-            ldiag.append(pairpar)
+            diag=diagdef(pairpar,Hn,ss,rd)
+            ldiag.append(diag)
         else:
             diag=diagdef(diagname,Hn,ss,rd)
             ldiag.append(diag)
 
-    return domtraj, dres, deltat, Hn, ldiag
+    return domtraj, dres, deltat, Hn, ldiag, subnproc
 
 #--------------------------------------------------------------------------#
 
@@ -289,9 +296,9 @@ def get_validtime(bt,lt=0):
     #output is in string fmt
 
     if isinstance(bt,str):
-        tt= datetime.strptime(bt,Inputs.time_fmt)+timedelta(hours=t)
+        tt= datetime.strptime(bt,Inputs.time_fmt)+timedelta(hours=lt)
     else:
-        tt= bt + timedelta(hours=t)
+        tt= bt + timedelta(hours=lt)
 
     vtime = datetime.strftime(tt,Inputs.time_fmt)
 
@@ -372,27 +379,26 @@ def get_dom_limits(ltraj, diag, res):
 #--------------------------------------------------------------------------#
 
 
-def comp_steering(lon,lat,steering_levels,uvmean_box,filin,inst,indf,res,domtraj,basetime,parfilt,filtapply):
+def comp_steering(lobj,steering_levels,uvmean_box,filin,inst,indf,res,domtraj,basetime,parfilt,filtapply,subnproc,pos=""):
     #Compute steering flow at levels steering_levels at the location (lon,lat) - lon, lat can be single or list of values
     #If filtrad > 0.0, the steering flow is computed at equivalent resolution filtrad (in km),
     #filin is the input file, and indf the inputdef data
     #uvmean_box : if >0, the size of the box (degrees) to compute the mean value of u,v
+    #pos : position where to compute (default=lonc,latc)
     #Output : u,v values of the steering flow (or list, if lon, lat are list)
 
     nlev = len(steering_levels)
     u_steer0 = []
     v_steer0 = []
 
-    if isinstance(lon,list):
-        npts=len(lon) #list of values lon,lat
+    if isinstance(lobj,list):
+        npts=len(lobj) #list of values lon,lat
         uniq=False
-        tlon = lon
-        tlat = lat
+        tobj=lobj
     else:
         npts=1 #unique value
         uniq=True
-        tlon = [lon]
-        tlat = [lat]
+        tobj = [lobj]
 
     #Extraction of total steering field
     lev=steering_levels[0]
@@ -401,22 +407,28 @@ def comp_steering(lon,lat,steering_levels,uvmean_box,filin,inst,indf,res,domtraj
         v_steer0=[0.0 for ivi in range(npts)]
     else:
         ch='u'+str(int(lev))
-        fu = Inputs.extract_data(filin,inst,indf,ch,domtraj,res[ch],basetime,filtrad=parfilt[ch]*filtapply)
+        fu = Inputs.extract_data(filin,inst,indf,ch,domtraj,res[ch],basetime,subnproc,filtrad=parfilt[ch]*filtapply)
         ch='v'+str(int(lev))
-        fv = Inputs.extract_data(filin,inst,indf,ch,domtraj,res[ch],basetime,filtrad=parfilt[ch]*filtapply)
+        fv = Inputs.extract_data(filin,inst,indf,ch,domtraj,res[ch],basetime,subnproc,filtrad=parfilt[ch]*filtapply)
         for ivi in range(1,nlev):
             lev=steering_levels[ivi]
             ch='u'+str(int(lev))
-            fu.operation("+",Inputs.extract_data(filin,inst,indf,ch,domtraj,res[ch],basetime,filtrad=parfilt[ch]*filtapply))
+            fu.operation("+",Inputs.extract_data(filin,inst,indf,ch,domtraj,res[ch],basetime,subnproc,filtrad=parfilt[ch]*filtapply))
             ch='v'+str(int(lev))
-            fv.operation("+",Inputs.extract_data(filin,inst,indf,ch,domtraj,res[ch],basetime,filtrad=parfilt[ch]*filtapply))
+            fv.operation("+",Inputs.extract_data(filin,inst,indf,ch,domtraj,res[ch],basetime,subnproc,filtrad=parfilt[ch]*filtapply))
         fu.operation("/",nlev)
         fv.operation("/",nlev)
 
         for ivi in range(npts):
             #Apply mean value of u,v in uvmean_box
-            u_steer0.append(np.mean(box_values(fu,tlon[ivi],tlat[ivi],uvmean_box)))
-            v_steer0.append(np.mean(box_values(fv,tlon[ivi],tlat[ivi],uvmean_box)))
+            if pos=="o":
+                lon1=tobj[ivi].traps["olon"]
+                lat1=tobj[ivi].traps["olat"]
+            else:
+                lon1=tobj[ivi].lonc
+                lat1=tobj[ivi].latc
+            u_steer0.append(np.mean(box_values(fu,lon1,lat1,uvmean_box)))
+            v_steer0.append(np.mean(box_values(fv,lon1,lat1,uvmean_box)))
 
     if uniq==1:
         u_steer=u_steer0[0]
@@ -639,6 +651,34 @@ def comp_length(lon1, lat1, lon2, lat2):
 
     return (r/1000.0)*np.arccos(ab)
 
+def comp_deriv(fld,lon,lat,ss,domtraj):
+    #Computes derivative of fld in the 4 directions at a distance of ss(degrees)
+    #If the distance gets out of the domain, we compute the derivative at the frontier
+    #Output : list of 4 derivative values
+
+    deriv=[]
+    #East
+    if abs(domtraj["lonmax"]-lon)>ss:
+        deriv.append(fld.getvalue_ll(lon+ss,lat)-fld.getvalue_ll(lon,lat))
+    else:
+        deriv.append((fld.getvalue_ll(domtraj["lonmax"],lat)-fld.getvalue_ll(lon,lat))*(ss/abs(domtraj["lonmax"]-lon)))
+    #West
+    if abs(domtraj["lonmin"]-lon)>ss:
+        deriv.append(fld.getvalue_ll(lon-ss,lat)-fld.getvalue_ll(lon,lat))
+    else:
+        deriv.append((fld.getvalue_ll(domtraj["lonmin"],lat)-fld.getvalue_ll(lon,lat))*(ss/abs(domtraj["lonmin"]-lon)))
+    #North
+    if abs(domtraj["latmax"]-lat)>ss:
+        deriv.append(fld.getvalue_ll(lon,lat+ss)-fld.getvalue_ll(lon,lat))
+    else:
+        deriv.append((fld.getvalue_ll(lon,domtraj["latmax"])-fld.getvalue_ll(lon,lat))*(ss/abs(domtraj["latmax"]-lat)))
+    #South
+    if abs(domtraj["latmin"]-lat)>ss:
+        deriv.append(fld.getvalue_ll(lon,lat-ss)-fld.getvalue_ll(lon,lat))
+    else:
+        deriv.append((fld.getvalue_ll(lon,domtraj["latmin"])-fld.getvalue_ll(lon,lat))*(ss/abs(domtraj["latmin"]-lat)))
+
+    return deriv
 #--------------------------------------------------------------------------#
 def get_res(fld):
     #Input : an epygram field on a regular latlon grid
@@ -1044,6 +1084,7 @@ def maskrad(lons,lats,lonc,latc,rad):
 
     nlon = len(lons)
     nlat = len(lats)
+    #print("Tools.maskrad dimensions: nlon=",nlon," nlat=",nlat," - nlon*nlat=",nlon*nlat)
     tab = np.zeros((nlat,nlon),dtype=int)
     for ivx in range(nlon):
         for ivy in range(nlat):
@@ -1059,7 +1100,7 @@ def bufferrad(lons,lats,tab1,rad):
     ##Input:
     #lons, lats: longitudes and latitudes of the domain on which to compute the mask
     #tab : first guess (0 or 1) around which the radius is extended
-    #rad: distance to apply around the existing zone in tab1
+    #rad: distance to apply around the existing zone in tab1 (km)
     #Output: tab: array of shape (len(lons), len(lats)), 1 if in the mask, 0 otherwise
 
     nlat=len(lats)
@@ -1070,19 +1111,32 @@ def bufferrad(lons,lats,tab1,rad):
     reslon=lons[1]-lons[0]
     reslat=lats[1]-lats[0]
 
+    #print("Tools.bufferrad dimensions: nlon=",nlon," nlat=",nlat," - nlon*nlat=",nlon*nlat)
     #Find existing contour in tab
     if np.max(tab2) > np.min(tab2):
         cs = plt.contour(tab2,levels=listseuils,cmap='jet')
         paths=cs.collections[0].get_paths()
+        #print("Tools.bufferrad ; number of objects: npaths=",len(paths))
         for p in paths:
             polygon=Polygon(p.vertices)
 
             #Projection du polygone en x,y
+            xt, yt = polygon.exterior.coords.xy
             x0,y0=polygon.centroid.xy
             x=x0[0]
-            y=x0[0]
+            y=y0[0] 
             lonc=lons[int(max(0,min(x,nlon-1)))]
             latc=lats[int(max(0,min(y,nlat-1)))]
+
+            tdx=comp_length(lonc,latc,lonc+reslon,latc)
+            tdy=comp_length(lonc,latc,lonc,latc+reslat)
+            marg = 3 # margin
+            minxt=max(0,int(min(xt)-rad/tdx-marg))
+            maxxt=min(nlon-1,int(max(xt+rad/tdx+1+marg)))
+            minyt=max(0,int(min(yt)-rad/tdy-marg))
+            maxyt=min(nlat-1,int(min(yt+rad/tdy)+1+marg))
+            #print("max/min: ", minxt, maxxt,minyt,maxyt)
+
             aeqd_proj = "+proj=aeqd +lat_0="+str(latc)+" +lon_0="+str(lonc)+" +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m"
             proj = pyproj.Transformer.from_crs(pyproj.CRS.from_proj4(latlon_proj),pyproj.CRS.from_string(aeqd_proj))
             xy_list = [proj.transform( interp(x,int(x),int(x)+1,lons[int(x)],lons[int(x)]+reslon),
@@ -1095,8 +1149,8 @@ def bufferrad(lons,lats,tab1,rad):
             proj_inv = pyproj.Transformer.from_crs(pyproj.CRS.from_string(aeqd_proj),pyproj.CRS.from_proj4(latlon_proj))
             pol = Polygon([proj_inv.transform(xy_pol[0][ivi], xy_pol[1][ivi]) for ivi in range(len(xy_pol[0]))])
 
-            for ivx in range(nlon):
-                for ivy in range(nlat):
+            for ivx in range(minxt,maxxt):
+                for ivy in range(minyt,maxyt):
                     if pol.contains(Point(lons[ivx],lats[ivy])):
                         tab2[ivy,ivx] = 1
 
@@ -1228,18 +1282,20 @@ def guess_diag(strdiag,Hn):
 
     return diag
 
-def make_diags(ldiag,obj,ss,rd,filin,inst,indf,domtraj,Hn,res,basetime,olon,olat,**kwargs):
+def make_diags(ldiag,obj,filin,inst,indf,domtraj,Hn,res,basetime,olon,olat,subnproc,**kwargs):
     #olon, olat: origin points (tracking parameter)
 
     for diag in ldiag:
         obj.diags.append(diag.strg)
         if "parfilt" in kwargs and "filtapply" in kwargs:
-            parfilt=kwargs["parfilt"]
-            filtapply=kwargs["filtapply"]
-            filtrad=parfilt[diag.par]*filtapply
+            if kwargs["filtapply"]==0:
+                filtrad=0.0
+            else:
+                parfilt=kwargs["parfilt"]
+                filtrad=parfilt[diag.par]*kwargs["filtapply"]
         else:
             filtrad=0.0
-        fld=Inputs.extract_data(filin,inst,indf,diag.par,domtraj,res[diag.par],basetime,filtrad=filtrad)
+        fld=Inputs.extract_data(filin,inst,indf,diag.par,domtraj,res[diag.par],basetime,subnproc,filtrad=filtrad)
         if diag.area=="o":
             val= fld.getvalue_ll(olon,olat,interpolation="linear")
             setattr(obj,diag.strg,[olon, olat, val])
@@ -1323,7 +1379,7 @@ def plot_F_LL(fld,tlon,tlat,fname,nl=10,vect=[]):
 #                      Some field processing                               #
 #--------------------------------------------------------------------------#
 
-def max_diag(par, traj, indf, dom, res, mintime, maxtime, basetime):
+def max_diag(par, traj, indf, dom, res, mintime, maxtime, basetime,subnproc=1):
     #Computes the maximum value of a parameter inside a domain, between mintime and maxtime
     #Inputs:
     #traj: the trajectory corresponding to the data (to get some metadata if needed)
@@ -1372,7 +1428,7 @@ def max_diag(par, traj, indf, dom, res, mintime, maxtime, basetime):
     while it<=len(lfile)-1: # and Inputs.check_file(lfile[it],indf2,par,par):
 
         #Extraction of field (no filtering applied)
-        flda = Inputs.extract_data(lfile[it],linst[it],indf2,par,dom,res,basetime)
+        flda = Inputs.extract_data(lfile[it],linst[it],indf2,par,dom,res,basetime,subnproc)
         lon0 = 0.5*(dom["lonmax"]+dom["lonmin"])
         lat0 = 0.5*(dom["latmax"]+dom["latmin"])
         #print(lon0,lat0)

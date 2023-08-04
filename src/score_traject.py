@@ -42,9 +42,9 @@ def score_comp_diff(lref, ltraj, basetime, ldiag, nmb, fname, proj="merc"):
     for im in range(nmb):
         hline.append("mb"+str(im).rjust(3,"0"))
     ncol=len(hline)
-    print(hline)
+    #print(hline)
     data = pd.DataFrame(columns=hline,dtype="float32")
-    print(data)
+    #print(data)
     #print(data.loc(['name']))
 
     #Correspondance of diagnostics names between ltraj and lref
@@ -69,10 +69,10 @@ def score_comp_diff(lref, ltraj, basetime, ldiag, nmb, fname, proj="merc"):
             if d2.compares(d1) and not chkis:
                 namediagt[dg]=dt
                 chkis=True
-    print(namediagr)
-    print(d1.__dict__)
-    print(namediagt)
-    print(d2.__dict__)
+    #print(namediagr)
+    #print(d1.__dict__)
+    #print(namediagt)
+    #print(d2.__dict__)
                         
     #Loop on tracknames (in reference)
     for tref in lref:
@@ -104,31 +104,36 @@ def score_comp_diff(lref, ltraj, basetime, ldiag, nmb, fname, proj="merc"):
                                     dline.append(np.nan)
                                 data.loc[get_index(tname,bt,term,dg)] = dline
                             #print(data.index)
+                            #print(dline)
 
                             mb=0 #member
                             if "member" in traj.inputdef:
                                 mb=int(traj.inputdef["member"])
 
                             if dg=="tte":
-                                print("Compute ", dg)
+                                #print("Compute ", dg)
                                 #itref, chk0 = tref.find_ind(traj.traj[it].time)
                                 ldist = comp_tte_cte_ate(tref,itr,traj.traj[it],proj)
                                 data.loc[ind,"mb"+str(mb).rjust(3,"0")] = ldist[dg]
                                 data.loc[ind,"obs"] = 0.0
                                 #dline.append(ldist[dg.lower()])
                             elif dg=="ate" or dg=="cte":
-                                print("Compute ", dg)
-                                if it>0:
-                                    itrefm1, chk1 = tref.find_ind(traj.traj[it-1].time)
+                                #print("Compute ", dg)
+                                dt_traj = traj.dt_traj()
+                                #print(traj.traj[it].time)
+                                #print(dt_traj)
+                                timm1=Tools.get_validtime(traj.traj[it].time,-dt_traj)
+                                timp1=Tools.get_validtime(traj.traj[it].time,dt_traj)
+                                if dt_traj>0:
+                                    itrefm1, chk1 = tref.find_ind(timm1)
+                                    itrefp1, chk2 = tref.find_ind(timp1)
                                 else:
-                                    chk1 = False
-                                if it<traj.nobj-1:
-                                    itrefp1, chk2 = tref.find_ind(traj.traj[it+1].time)
-                                else:
-                                    chk2 = False
+                                    chk1=False
+                                #print("member_"+str(mb),chk1, chk2, it, traj.nobj-1)
                                 if chk1 and chk2:
                                     ldist = comp_tte_cte_ate(tref,itr,traj.traj[it],proj,dt=[itrefm1[0],itrefp1[0]])
                                     data.loc[ind,"mb"+str(mb).rjust(3,"0")] = ldist[dg]
+                                    #print(dg+"=",ldist[dg])
                                     data.loc[ind,"obs"] = 0.0
                                 #dline.append(ldist[dg.lower()])
                             elif dg=="lonc":
@@ -138,7 +143,7 @@ def score_comp_diff(lref, ltraj, basetime, ldiag, nmb, fname, proj="merc"):
                                 data.loc[ind,"mb"+str(mb).rjust(3,"0")] = traj.traj[it].latc - tref.traj[itr].latc
                                 data.loc[ind,"obs"] = tref.traj[itr].latc
                             else: #other diagnostic
-                                print(traj.traj[it].__dict__[namediagt[dg]], tref.traj[itr].__dict__[namediagr[dg]])
+                                #print(traj.traj[it].__dict__[namediagt[dg]], tref.traj[itr].__dict__[namediagr[dg]])
                                 lvalt=traj.traj[it].__dict__[namediagt[dg]]
                                 lvalr=tref.traj[itr].__dict__[namediagr[dg]]
                                 if isinstance(lvalt,float):
@@ -207,18 +212,18 @@ def comp_tte_cte_ate(tref,itref,obj,proj,dt=[]):
         AP=np.array([xP-xA,yP-yA])
         dAP=distance_plan(xA,yA,xP,yP)
 
-        print(dt)
+        #print(dt)
         x_A_t0, y_A_t0 = LonLat_To_XY_merc(proj,tref.traj[dt[0]].lonc, tref.traj[dt[0]].latc)
         x_A_t2, y_A_t2 = LonLat_To_XY_merc(proj,tref.traj[dt[1]].lonc, tref.traj[dt[1]].latc)
         trajA=np.array([x_A_t2-x_A_t0, y_A_t2-y_A_t0])
         dtrajA=distance_plan(x_A_t0,y_A_t0, x_A_t2, y_A_t2)
 
-        print("dtraj : ", dtrajA)
+        #print("dtraj : ", dtrajA)
 
         # test valeur de TTE (pour éviter que ATE et CTE = nan qd TTE est nul)
         if TTE > 1e-6:
 
-            print("TTE=",TTE)  
+            #print("TTE=",TTE)  
 
             # calcul cosinus et sinus de l'angle entre la trajectoire analysée et le vecteur AP
 
@@ -311,7 +316,7 @@ def plot_boxplot_score(fig, df, diag, pdt, echmax, qmin, qmax, **kwargs) :
 
     ax=plt.gca()
     ax.set_xticklabels(labels=l_ech,rotation=45)
-    ax.set_xlabel("Echéance (en h)")#, ha='left')
+    ax.set_xlabel("Forecast term (h)")#, ha='left')
     if "ylim" in kwargs:
         ax.set_ylim(kwargs["ylim"])
     if diag.lower() in ["tte","cte","ate"]:
@@ -334,5 +339,106 @@ def plot_boxplot_score(fig, df, diag, pdt, echmax, qmin, qmax, **kwargs) :
     return
 
 
+def plot_line_score(fig, df, diag, pdt, echmax, lmetric, **kwargs) :
+  #Linear plots of diag for several experiments (can be "TTE" or "ATE" or "CTE" or other diagnostic that is present in df)
+  #ldf : list dataframe generated by score_comp_diff() (the different experiments)
+  #lmetric : list of values that are plotted (can be "nb" (number of forecasts per term), "mean", "max", "min" or a quantile (q50, q90...))
+  #by default, lmark is of different line options
+
+    if fig=={}:
+        #Create new figure and 1 axis
+        fig, ax = start_figure_score()
+    else:
+        ax=plt.axes()
+
+    #read input data
+    if isinstance(df,str):
+        data = pd.read_csv(df)
+    else:
+        data = df
+
+    if isinstance(lmetric,str):
+        lmetric1=[lmetric]
+    else:
+        lmetric1=lmetric
+
+    #read plot options
+    if "lmark" in kwargs:
+        lmark=kwargs["lmark"]
+    else:
+        lmark=["-","o","."]
+
+    #List of members in the dataframe
+    lcol = list(data.columns)
+    lmembers = [col for col in lcol if col[0:2]=="mb"]
+
+    #Filtering diagnostic name
+    datid = data.loc[data["diag"]==diag.lower()]
+
+    fct=1
+    if diag.lower() not in ["tte","cte","ate"]:
+        fct = Tools.guess_diag(diag,True).plot_fct
+
+    # Boucle sur les différentes échéances
+    l_TE = []
+    l_nb_parech = []
+    l_ech = []
+    ech = 0
+    while ech<=echmax:
+        datech = datid.loc[datid["fctime"]==int(ech)]
+        vals = []
+        for mb in lmembers:
+            vals.extend([x*fct for x in datech[mb] if not np.isnan(x)])
+        nb_parech=len(vals)/len(lmembers)
+        l_TE.append(vals)
+        l_ech.append(ech)
+        l_nb_parech.append(nb_parech)
+        ech = ech + pdt
+
+   #Plot
+    for met in lmetric1:
+
+        plval=[]
+        if met=="nb": #Plot nombre de forecasts parech
+            plval=l_nb_parech
+        elif met=="mean":
+            for ivi in range(len(l_ech)):
+                if len(l_TE[ivi])>0:
+                    plval.append(np.mean(l_TE[ivi]))
+                else:
+                    plval.append(np.nan)
+        elif met=="min":
+            for ivi in range(len(l_ech)):
+                if len(l_TE[ivi])>0:
+                    plval.append(np.min(l_TE[ivi]))
+                else:
+                    plval.append(np.nan)
+        elif met=="max":
+            for ivi in range(len(l_ech)):
+                if len(l_TE[ivi])>0:
+                    plval.append(np.max(l_TE[ivi]))
+        elif met[0]=="q":
+            for ivi in range(len(l_ech)):
+                if len(l_TE[ivi])>1:
+                    plval.append(np.quantile(l_TE[ivi],float(met.replace("q",""))/100.0))
+                else:
+                    plval.append(np.nan)
+        else:
+            print("Bad metric in plot_line_score()")
+            plval = [0.0 for ivi in range(len(l_ech))]
+
+        #ylim
+        if "ylim" in kwargs:
+           ax.set_ylim(kwargs["ylim"])
+           kwargs.pop("ylim")
+
+        ax.plot(l_ech,plval,**kwargs)
+
+        ax=plt.gca()
+        ax.set_xticks(l_ech)
+        ax.set_xticklabels(labels=l_ech,rotation=45)
+        ax.set_xlabel("Forecast term (hours)")#, ha='left')
+
+    return
 
 

@@ -7,5 +7,6 @@
 	"parfilt": {"rv850":280.0,"u850":280.0,"v850":280.0,"u700":280.0,"v700":280.0,"mslp":0,"ff850":0},
 	"parres":  {"rv850":1.0,"u850":1.0,"v850":1.0,"u700":1.0,"v700":1.0,"mslp":0.25,"ff850":0.25},
 	"specfields": {"track":"rv850","pairing":"mslp"},
-	"diag_parameter": ["rv850_o","mslp_p","ff850_max_s3"]
+	"diag_parameter": ["rv850_o","mslp_p","ff850_max_s3"],
+	"parallel":{"subnproc":4}
 }

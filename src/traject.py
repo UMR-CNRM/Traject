@@ -13,7 +13,7 @@ import copy
 import glob
 import os, glob
 import sys
-import time
+import time as timen
 from datetime import datetime,timedelta,time
 import h5py
 import json
@@ -29,7 +29,7 @@ import epygram
 import concurrent.futures
 
 #Generic variables
-traject_version = 0.86
+traject_version = 0.90
 missval = -9999.0
 time_orig = np.datetime64("1970-01-01T00:00:00")
 time_fmt = "%Y%m%d%H"
@@ -67,6 +67,15 @@ def DefTrack(classobj,**kwargs):
     track_cls = getattr(module, "Track")
 
     return track_cls(**kwargs)
+
+def Search_allcores(classobj,**kwargs):
+
+    #L'importation du module convenable
+    module = __import__("OBJ_"+classobj)
+
+    search_allcores = getattr(module,"search_allcores")
+
+    return search_allcores(**kwargs)
 
 def PrepareFiles(algo,indf,dirkeys,timetraj,**kwargs):
     #Same input arguments as track (algo, indf, timetraj + termtraj if fc)
@@ -110,6 +119,12 @@ def PrepareFiles(algo,indf,dirkeys,timetraj,**kwargs):
         else:
             lvar2.append(var)
     lvar = [*set(lvar2)] #remove duplicates
+
+    #subnproc
+    subnproc=1
+    if algo2.parallel is not None:
+        if "subnproc" in algo2.parallel:
+            subnproc=algo2.parallel["subnproc"]
 
     if "members" in kwargs and "member" in indf2.__dict__.keys():
         lmb=kwargs['members'] #should be a list of integers
@@ -236,7 +251,7 @@ def PrepareFiles(algo,indf,dirkeys,timetraj,**kwargs):
                 else:
                     fname2 = binst+'.nc'
                 #print("Process " + fic + " to " + dirkeys["filter"]+"FILT$res..."+fname2)
-                param_file, param_nc = Inputs.filter_field(fic,inst,indf2,algo2.parfilt,domtraj,parres,dirkeys["filter"],binst,fname2)
+                param_file, param_nc = Inputs.filter_field(fic,inst,indf2,algo2.parfilt,domtraj,parres,dirkeys["filter"],binst,fname2,subnproc)
 
             if imb==0: #first member loop only
                 indf2.directory=dirkeys["filter"]
@@ -290,6 +305,7 @@ def read_nml(fic):
 
     return objdef
 
+
 def track(algo,indf,timetraj,**kwargs):
     #Definition and launch of the algorithm
     #traj = DefAlgo(algo,**kwargs)
@@ -326,41 +342,58 @@ def track(algo,indf,timetraj,**kwargs):
 
     #Read reftraj (if any)
     if "reftraj" in kwargs:
-        nref = kwargs["reftraj"]
+        refnam = kwargs["reftraj"]
+        nref = 1
         kwargs.pop("reftraj")
     else:
         lref = ["noref"]
+        nref = 0
 
     #Parallelization options (only applies on fc)
     if "ntasks" in algo2.parallel:
         ntasks = algo2.parallel["ntasks"]
-        executor = concurrent.futures.ThreadPoolExecutor(max_workers=ntasks)
+        #executor = concurrent.futures.ThreadPoolExecutor(max_workers=ntasks)
+        executor = concurrent.futures.ProcessPoolExecutor(max_workers=ntasks)
     else:
         ntasks = 1
 
     if indf2.origin=="fc": #Forecast data is processed: algo is applied on term steps
+        tsk = 0
 
         for basetime in Inputs.comptimes(timetraj): #Loop on timetraj
             lfile,linst2 = indf2.get_filinst(kwargs["termtraj"],basetime)
-            lref = Tools.get_reftraj(linst2,algo2.domtraj,nref)
+            if nref>0:
+                lref = Tools.get_reftraj(linst2,algo2.domtraj,refnam)
 
             for reftraj in lref: #Loop on lref
                 #Loop on members
                 for imb in range(nmb):
 
                     if ntasks==1: #No parallelisation
-                        outf.append(track_parallel_fc(myalgo_func,algo2,indf2,basetime,lmb,imb,reftraj,**kwargs))
+                        print("No Parallelisation")
+                        outf.append(track_parallel_fc(myalgo_func,0,algo2,indf2,basetime,lmb,imb,reftraj,**kwargs))
                     else: #Parallelisation
-                        outf.append(executor.submit(track_parallel_fc,myalgo_func,algo2,indf2,basetime,lmb,imb,reftraj,**kwargs))
+                        tsk = tsk + 1
+                        outf.append(executor.submit(track_parallel_fc,myalgo_func,tsk,algo2,indf2,basetime,lmb,imb,reftraj,**kwargs))
+
                     
+        tsk = 0 
         for out in outf:
             if ntasks==1:
                 outtraj, indf3 = out
             else:
-                outtraj, indf3 = out.result()
+                tsk = tsk + 1
+                try:
+                    outtraj, indf3 = out.result()
+                except Exception as exc:
+                    print("Exception raised by Task "+str(tsk)+":",exc)
+                    outtraj=[]
+                    indfw=[]
+
             if len(outtraj)>0:
-                trajlist.append(outtraj[0])
-                indfw.append(indf3)
+                trajlist.extend(outtraj)
+                for ivi in range(len(outtraj)):
+                    indfw.append(copy.deepcopy(indf3))
 
     elif indf2.origin=="an" or self.origin=="cl": #algo is applied on instants
         #No parallelization
@@ -405,8 +438,10 @@ def track(algo,indf,timetraj,**kwargs):
 
     return trajlist
 
-def track_parallel_fc(func,algo,indf,basetime,lmb,imb,reftraj,**kwargs):
+def track_parallel_fc(func,b,algo,indf,basetime,lmb,imb,reftraj,**kwargs):
 
+    print("Start PROCESS ",b," :",datetime.now().strftime("%H:%M:%S"))
+    
     indf3=copy.deepcopy(indf)
     if len(lmb)>0: #Several members
         mbs=str(lmb[imb]).rjust(3,'0')
@@ -415,6 +450,8 @@ def track_parallel_fc(func,algo,indf,basetime,lmb,imb,reftraj,**kwargs):
     lfile,linst = indf3.get_filinst(kwargs["termtraj"],basetime)
     print("Tracking - "+ str(imb) + ", basetime="+basetime)
     outtraj = func(algo,indf3,linst,lfile,basetime=basetime,reftraj=[reftraj],**kwargs)
+
+    print("End PROCESS ",b," :",datetime.now().strftime("%H:%M:%S"))
 
     return outtraj, indf3
 

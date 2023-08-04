@@ -375,6 +375,7 @@ def plot_map_strike(ltraj, diag, fig, diagrad, diagthr, centre, cax, leg, opt, c
         for obj in traj.traj:
             images[ivi] = obj.mask(lons,lats,diag,diagthr,diagrad,centre)
             ivi = ivi +1
+            print(ivi)
     images[images > 0] = 1
     
     summed_img = np.sum(images, axis=0)
@@ -516,7 +517,7 @@ def draw_departments(ax,epygram_departments):
 def set_dom_limits(ltraj,opt,diag="",diagrad=0.0,dom=[]):
 
     #Computes resolution
-    print(ltraj[0].__dict__)
+    #print(ltraj[0].__dict__)
     if ltraj[0].inputdef["origin"]=="obs":
         leng = ltraj[0].inputdef["domain"]["lonmax"] - ltraj[0].inputdef["domain"]["lonmin"]
         if leng>100.0:
@@ -900,7 +901,7 @@ def get_col(cmap,n):
         for ivi in range(n):
             lcol.append(mpl.colors.to_hex(gmap(ivi/(n-1)), keep_alpha=True))
     elif n>0:
-        lcol=mpl.colors.to_hex(gmap(0), keep_alpha=True)
+        lcol=[mpl.colors.to_hex(gmap(0), keep_alpha=True)]
         
     return lcol
     

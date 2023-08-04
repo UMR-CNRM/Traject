@@ -68,6 +68,8 @@ def track(algo,indf,linst,lfile,**kwargs):
     if "rd" in algo.varalgo:
         rd=algo.varalgo["rd"] #Radius of the circle for search of extremas to compute diagnostics (in km)
 
+    radmax = algo.varalgo["radmax"] #Radius (km) inside which only one minimum is kept (the highest vorticity value) 
+
     ltraj=[]
 
     if "basetime" in kwargs:
@@ -80,71 +82,53 @@ def track(algo,indf,linst,lfile,**kwargs):
     else:
         linst2 = linst
 
-    #Read reference track and find the list of tracks valid at any instant in linst2 and in the domain
-    if "reftraj" in kwargs:
-        lref = Tools.get_reftraj(linst2,domtraj,kwargs["reftraj"])
-    else:
-        lref=[]
-    if len(lref)==0:
-        print("WARNING - No reference track could be found (required for VDG tracking algorithm)")
+##################*
 
-    #Loops on points found in the reference tracks
-    for iref in range(len(lref)):
-        if "traj" in locals():
-            del traj
-        reftraj=lref[iref]
+    it=0
+    exclude=False
+    ltraj0=[]
+    while it<len(linst)-1:
+        print("Instant - ",linst[it])
+        
+        if it<len(linst2)-1:
+            #Finding all extremas (only for instants in linst2)
+            lobj = Search_allcores(algo.classobj,fic=lfile[it],inst=linst[it],indf=indf,trackpar=trackpar,signtrack=signtrack,domtraj=domtraj,res=res[trackpar],basetime=basetime,track_parameter=track_parameter,subnproc=subnproc,filtrad=parfilt[trackpar]*filtapply,dist=radmax, thr=thr_track)
+            print("Testing "+str(len(lobj))+" initial objects")
+            for obj in lobj:
+                obj2 = obj.search_core(lfile[it],linst[it],pairpar,Hn,indf,algo,domtraj,res,parfilt,filtapply,track_parameter,basetime,subnproc,diag_parameter,ss=ss,thr_param=thr_pair,pairing=True,smooth=True)
+                if obj2 is not None:
+                    isok, exclude = obj2.conditiontype(lfile[it],linst[it],indf,algo,domtraj,res,parfilt,filtapply,basetime,subnproc,init=True)
+                if obj2 is not None and not exclude:
+                    #Test if obj2 is close to an pre-existing traj
+                    isclose=False
+                    for traj in ltraj0:
+                        objt,fnd=traj.find_inst(linst[it])
+                        objt1=objt[0]
+                        if Tools.comp_length(obj2.lonc,obj2.latc,objt1.lonc,objt1.latc)<radmax:
+                            isclose=True
+                    if not isclose:
+                        #Create track
+                        print("A starting point has been found at time : ",linst2[it])
+                        print("Point found:",obj2.lonc,obj2.latc)
+                        traj = DefTrack(algo.classobj,basetime=basetime)
 
-        #------------------------------------------------------------------------------
-                        # First step: Start the track from the closest point to reftraj
-        #------------------------------------------------------------------------------
+                        #Initialisations of obj2 variables and addition to traj
+                        obj2.traps["olon"]=obj.lonc
+                        obj2.traps["olat"]=obj.latc
+                        u_steer, v_steer = Tools.comp_steering(obj2,steering_levels,uvmean_box,lfile[it],linst2[it],indf,res,domtraj,basetime,parfilt,filtapply,subnproc,pos="o")
 
-        it0=-1
-        gook=False
-        obj2=None
-        exclude=False
-        while not gook and it0<len(linst2)-1:
-            it0=it0+1
-            print(it0)
-            refobj, gook1 =reftraj.find_inst(linst2[it0]) #Attention, delta t différent !!
-            if gook1: # Tracking main core
-                obj = refobj[0].search_core(lfile[it0],linst[it0],trackpar,Hn,indf,algo,domtraj,res,parfilt,filtapply,track_parameter,basetime,subnproc,[],ss=ss,thr_param=thr_track)
-                obj2 = None
-                if obj is not None: # Pairing
-                    obj2 = obj.search_core(lfile[it0],linst[it0],pairpar,Hn,indf,algo,domtraj,res,parfilt,filtapply,track_parameter,basetime,subnproc,diag_parameter,ss=ss,thr_param=thr_pair,pairing=True,smooth=True)
-                    if obj2 is not None:
-                        isok, exclude = obj2.conditiontype(lfile[it0],linst[it0],indf,algo,domtraj,res,parfilt,filtapply,basetime,subnproc,init=True)
-            gook = obj is not None and obj2 is not None and not exclude
+                        obj2.traps["u_steer"] = u_steer
+                        obj2.traps["v_steer"] = v_steer
+                        obj2.traps["u_speed"] = u_steer #we cannot determine a movement at step 0, so we take wind_steer
+                        obj2.traps["v_speed"] = v_steer
+                        obj2.traps[trackpar] = obj.traps[trackpar]
 
-        if gook: #A 
-            #Creation of the track
-            print("A starting point has been found at time : ",linst2[it0])
-            print("Reference point:",refobj[0].lonc,refobj[0].latc)
-            print("Point found:",obj2.lonc,obj2.latc)
-            traj = DefTrack(algo.classobj,basetime=basetime)
-            traj.name = reftraj.name
+                        traj.add_obj(obj2)
+                        ltraj0.append(traj)
 
-            #Initialisations of obj2 variables and addition to traj
-            obj2.traps["olon"]=obj.lonc
-            obj2.traps["olat"]=obj.latc
-            u_steer, v_steer = Tools.comp_steering(obj2,steering_levels,uvmean_box,lfile[it0],linst2[it0],indf,res,domtraj,basetime,parfilt,filtapply,subnproc,pos="o")
-
-            obj2.traps["u_steer"] = u_steer
-            obj2.traps["v_steer"] = v_steer
-            obj2.traps["u_speed"] = u_steer #we cannot determine a movement at step 0, so we take wind_steer
-            obj2.traps["v_speed"] = v_steer
-            obj2.traps[trackpar] = obj.traps[trackpar]
-
-            print(obj2.nameobj)
-            traj.add_obj(obj2)
-
-        #------------------------------------------------------------------------------
-                                    # TIME LOOP
-        #------------------------------------------------------------------------------
-        it=it0
-        gook= obj2 is not None and not exclude
-
-        while gook and it<len(linst)-1 and Inputs.check_file(lfile[it+1],indf,trackpar,trackpar):
-            it = it + 1
+        #Add point at next step for all tracks (for all instants)
+        it = it + 1
+        for traj in ltraj0:
             print("Looking for a point at instant ", linst[it])
             instm1=linst[it-1]
             inst=linst[it]
@@ -162,9 +146,8 @@ def track(algo,indf,linst,lfile,**kwargs):
                 obj2 = obj.search_core(lfile[it],linst[it],pairpar,Hn,indf,algo,domtraj,res,parfilt,filtapply,track_parameter,basetime,subnproc,diag_parameter,ss=ss,thr_param=thr_pair,pairing=True,smooth=True)
                 if obj2 is not None:
                     isok, exclude = obj2.conditiontype(lfile[it],linst[it],indf,algo,domtraj,res,parfilt,filtapply,basetime,subnproc,init=False)
-            gook = obj is not None and obj2 is not None and not exclude
 
-            if gook:
+            if obj is not None and obj2 is not None and not exclude:
                 #Initialisations of obj2 variables and addition to traj
                 obj2.traps["olon"]=obj.lonc
                 obj2.traps["olat"]=obj.latc
@@ -178,33 +161,25 @@ def track(algo,indf,linst,lfile,**kwargs):
 
                 traj.add_obj(obj2)
 
-            #DEBUG - Plot champs et des points candidats (pour voir)
-            if DEBUGGING:
+    #Finalisation
+    stt=(signtrack==1)
+    for traj in ltraj0:
+        bmax=False
+        maxv=0.0
 
-                flda = Inputs.extract_data(lfile[it],linst[it],indf,trackpar,domtraj,res[trackpar],basetime,subnproc,filtrad=parfilt[trackpar]*filtapply)
-                Tools.plot_F_LL(flda,[objm1.traps["olon"]],[objm1.traps["olat"]],trackpar+datetime.strftime(linst[it],format=time_fmt),nl=20,\
-                    vect=[(1-w)*objm1.traps["u_steer"]+ w*objm1.traps["u_speed"],(1-w)*objm1.traps["v_steer"]+ w*objm1.traps["v_speed"]])
-                fldb = Inputs.extract_data(lfile[it],linst[it],indf,pairpar,domtraj,res[trackpar],basetime,subnproc,filtrad=parfilt[trackpar]*filtapply)
-                Tools.plot_F_LL(fldb,[objm1.lonc],[objm1.latc],pairpar+datetime.strftime(linst[it],format=time_fmt),nl=20)
-
-        if "traj" in locals():
-            stt=(signtrack==1)
+        if traj.nobj>0:
             bmax=False
             maxv=0.0
-
-            if traj.nobj>0:
-                bmax=False
-                maxv=0.0
-                for obj in traj.traj:
-                    print("Final "+trackpar+":",obj.traps[trackpar])
-                    #condition on min/max value
-                    if (stt and obj.traps[trackpar]>=thr_track) or ((not stt) and obj.traps[trackpar]<=thr_track):
-                        maxv=obj.traps[trackpar]
-                        bmax=True
-            if bmax:
-                ltraj.append(traj)
-            else:
-                print("This trajectory does not reach the tracking threshold - We skip it")
+            for obj in traj.traj:
+                print("Final "+trackpar+":",obj.traps[trackpar])
+                #condition on min/max value
+                if (stt and obj.traps[trackpar]>=thr_track) or ((not stt) and obj.traps[trackpar]<=thr_track):
+                    maxv=obj.traps[trackpar]
+                    bmax=True
+        if bmax:
+            ltraj.append(traj)
+        else:
+            print("This trajectory does not reach the tracking threshold - We skip it")
 
     return ltraj
 
