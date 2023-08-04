@@ -1,0 +1,13 @@
+{
+        "classobj": "Centre0D",
+        "nameobj":"Cyclone",
+	"name": "VDG",
+	"varalgo": {"last_start":12,"thr_track":2e-4,"thr_pairing":101000.0,"ss":4,"w":0.3,"steering_levels":[850,700]},
+	"domtraj":{"lonmin":-30.0,"latmin":35.0,"lonmax":20.0,"latmax":60.0},
+	"parfilt":{"rv850":100.0,"u850":100.0,"v850":100.0,"u700":100.0,"v700":100.0,"mslp":0},
+	"parres":{"all":0.5},
+	"specfields":{"track":"rv850","pairing":"mslp"},
+	"diag_parameter":["mslp_o","mslp_p"],
+	"parallel":{"ntasks":2,"subnproc":2}
+}
+

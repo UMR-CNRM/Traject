@@ -664,7 +664,7 @@ def comp_deriv(fld,lon,lat,ss,domtraj):
         deriv.append((fld.getvalue_ll(domtraj["lonmax"],lat)-fld.getvalue_ll(lon,lat))*(ss/abs(domtraj["lonmax"]-lon)))
     #West
     if abs(domtraj["lonmin"]-lon)>ss:
-        deriv.append(fld.getvalue_ll(lon+ss,lat)-fld.getvalue_ll(lon,lat))
+        deriv.append(fld.getvalue_ll(lon-ss,lat)-fld.getvalue_ll(lon,lat))
     else:
         deriv.append((fld.getvalue_ll(domtraj["lonmin"],lat)-fld.getvalue_ll(lon,lat))*(ss/abs(domtraj["lonmin"]-lon)))
     #North

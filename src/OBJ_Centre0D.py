@@ -374,8 +374,8 @@ class ObjectM:
             if "casetype" in algo.conditiontype:
                 if algo.conditiontype["casetype"]=="TCVitart97":
                     if (not algo.conditiontype["when"]=="init") or init==True:
-                        print("Test condition "+algo.conditiontype["casetype"])
-                        print("... a tropical cyclone - "+algo.conditiontype["nameobj"]+" - criterion based on t200-t300-t400-t500, z200 and z1000 fields")
+                        #print("Test condition "+algo.conditiontype["casetype"])
+                        #print("... a tropical cyclone - "+algo.conditiontype["nameobj"]+" - criterion based on t200-t300-t400-t500, z200 and z1000 fields")
 
                         #Pameters
                         if abs(domtraj["lonmax"]-self.lonc)>3.0:
