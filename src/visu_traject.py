@@ -375,7 +375,7 @@ def plot_map_strike(ltraj, diag, fig, diagrad, diagthr, centre, cax, leg, opt, c
         for obj in traj.traj:
             images[ivi] = obj.mask(lons,lats,diag,diagthr,diagrad,centre)
             ivi = ivi +1
-            print(ivi)
+            #print(ivi)
     images[images > 0] = 1
     
     summed_img = np.sum(images, axis=0)

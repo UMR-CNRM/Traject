@@ -245,8 +245,8 @@ class ObjectM:
         if diag=="":
             dkind=""
             ldiag=[]
-            lonm=obj.lonc
-            latm=obj.latm
+            lonm=self.lonc
+            latm=self.latc
         else:
             Hn = (lats[0]>=0.0) #Northern Hemisphere
             dd = Tools.guess_diag(diag,Hn)
