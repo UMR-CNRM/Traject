@@ -103,19 +103,20 @@ def track(algo,indf,linst,lfile,**kwargs):
                     isclose=False
                     for traj in ltraj0:
                         objt,fnd=traj.find_inst(linst[it])
-                        objt1=objt[0]
-                        if Tools.comp_length(obj2.lonc,obj2.latc,objt1.lonc,objt1.latc)<radmax:
-                            isclose=True
+                        if fnd:
+                            objt1=objt[0]
+                            if Tools.comp_length(obj2.lonc,obj2.latc,objt1.lonc,objt1.latc)<radmax:
+                                isclose=True
                     if not isclose:
                         #Create track
-                        print("A starting point has been found at time : ",linst2[it])
+                        print("A starting point has been found at time : ",linst[it])
                         print("Point found:",obj2.lonc,obj2.latc)
                         traj = DefTrack(algo.classobj,basetime=basetime)
 
                         #Initialisations of obj2 variables and addition to traj
                         obj2.traps["olon"]=obj.lonc
                         obj2.traps["olat"]=obj.latc
-                        u_steer, v_steer = Tools.comp_steering(obj2,steering_levels,uvmean_box,lfile[it],linst2[it],indf,res,domtraj,basetime,parfilt,filtapply,subnproc,pos="o")
+                        u_steer, v_steer = Tools.comp_steering(obj2,steering_levels,uvmean_box,lfile[it],linst[it],indf,res,domtraj,basetime,parfilt,filtapply,subnproc,pos="o")
 
                         obj2.traps["u_steer"] = u_steer
                         obj2.traps["v_steer"] = v_steer
@@ -133,33 +134,33 @@ def track(algo,indf,linst,lfile,**kwargs):
             instm1=linst[it-1]
             inst=linst[it]
             objm,fnd=traj.find_inst(instm1) #Object at the previous instant
-            objm1=objm[0]
+            if fnd:
+                objm1=objm[0]
 
-            #Computation of a guess (advection by the steering flow and displacement speed at objm1)
-            #We advect olon, olat
-            obj_guess = objm1.advect(inst, (1-w)*objm1.traps["u_steer"]+ w*objm1.traps["u_speed"],
-                (1-w)*objm1.traps["v_steer"]+ w*objm1.traps["v_speed"],pos="o")
+                #Computation of a guess (advection by the steering flow and displacement speed at objm1)
+                #We advect olon, olat
+                obj_guess = objm1.advect(inst, (1-w)*objm1.traps["u_steer"]+ w*objm1.traps["u_speed"],
+                    (1-w)*objm1.traps["v_steer"]+ w*objm1.traps["v_speed"],pos="o")
 
-            obj = obj_guess.search_core(lfile[it],linst[it],trackpar,Hn,indf,algo,domtraj,res,parfilt,filtapply,track_parameter,basetime,subnproc,[],ss=ss,thr_param=thr_track)
-            obj2 = None
-            if obj is not None: # Pairing
-                obj2 = obj.search_core(lfile[it],linst[it],pairpar,Hn,indf,algo,domtraj,res,parfilt,filtapply,track_parameter,basetime,subnproc,diag_parameter,ss=ss,thr_param=thr_pair,pairing=True,smooth=True)
-                if obj2 is not None:
-                    isok, exclude = obj2.conditiontype(lfile[it],linst[it],indf,algo,domtraj,res,parfilt,filtapply,basetime,subnproc,init=False)
+                obj = obj_guess.search_core(lfile[it],linst[it],trackpar,Hn,indf,algo,domtraj,res,parfilt,filtapply,track_parameter,basetime,subnproc,[],ss=ss,thr_param=thr_track)
+                obj2 = None
+                if obj is not None: # Pairing
+                    obj2 = obj.search_core(lfile[it],linst[it],pairpar,Hn,indf,algo,domtraj,res,parfilt,filtapply,track_parameter,basetime,subnproc,diag_parameter,ss=ss,thr_param=thr_pair,pairing=True,smooth=True)
+                    if obj2 is not None:
+                        isok, exclude = obj2.conditiontype(lfile[it],linst[it],indf,algo,domtraj,res,parfilt,filtapply,basetime,subnproc,init=False)
 
-            if obj is not None and obj2 is not None and not exclude:
-                #Initialisations of obj2 variables and addition to traj
-                obj2.traps["olon"]=obj.lonc
-                obj2.traps["olat"]=obj.latc
-                u_steer, v_steer = Tools.comp_steering(obj2,steering_levels,uvmean_box,lfile[it],linst[it],indf,res,domtraj,basetime,parfilt,filtapply,subnproc,pos="o")
-                u_speed, v_speed = obj2.comp_mvt(objm1,pos="o")
-                obj2.traps["u_steer"] = u_steer
-                obj2.traps["v_steer"] = v_steer
-                obj2.traps["u_speed"] = u_speed
-                obj2.traps["v_speed"] = v_speed
-                obj2.traps[trackpar] = obj.traps[trackpar]
-
-                traj.add_obj(obj2)
+                if obj is not None and obj2 is not None and not exclude:
+                    #Initialisations of obj2 variables and addition to traj
+                    obj2.traps["olon"]=obj.lonc
+                    obj2.traps["olat"]=obj.latc
+                    u_steer, v_steer = Tools.comp_steering(obj2,steering_levels,uvmean_box,lfile[it],linst[it],indf,res,domtraj,basetime,parfilt,filtapply,subnproc,pos="o")
+                    u_speed, v_speed = obj2.comp_mvt(objm1,pos="o")
+                    obj2.traps["u_steer"] = u_steer
+                    obj2.traps["v_steer"] = v_steer
+                    obj2.traps["u_speed"] = u_speed
+                    obj2.traps["v_speed"] = v_speed
+                    obj2.traps[trackpar] = obj.traps[trackpar]
+                    traj.add_obj(obj2)
 
     #Finalisation
     stt=(signtrack==1)

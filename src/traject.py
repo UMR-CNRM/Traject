@@ -451,7 +451,7 @@ def track_parallel_fc(func,b,algo,indf,basetime,lmb,imb,reftraj,**kwargs):
     print("Tracking - "+ str(imb) + ", basetime="+basetime)
     outtraj = func(algo,indf3,linst,lfile,basetime=basetime,reftraj=[reftraj],**kwargs)
 
-    print("End PROCESS ",b," :",datetime.now().strftime("%H:%M:%S"))
+    print("End PROCESS ",b," :",datetime.now().strftime("%H:%M:%S")," - ",len(outtraj)," tracks have been found")
 
     return outtraj, indf3
 
