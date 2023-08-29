@@ -25,6 +25,7 @@ import cartopy.crs as ccrs #DEBUG
 import cartopy.feature as cfeature #DEBUG
 import matplotlib.pyplot as plt #DEBUG
 from datetime import timedelta, datetime
+import copy
 from traject import *
 
 DEBUGGING=False
@@ -32,7 +33,7 @@ DEBUGGING=False
 def track(algo,indf,linst,lfile,**kwargs):
 
     #Initialisation of domtraj, diag_parameter, Hn, deltat depending on the input parameters
-    domtraj, res, deltat, Hn, diag_parameter, subnproc = Tools.init_algo(algo,indf,linst,lfile,**kwargs)
+    domtraj, res, deltat, Hn, diag_parameter, lparam, subnproc = Tools.init_algo(algo,indf,linst,lfile,**kwargs)
 
     #Tracking variables used by the algorithm
     parfilt=algo.parfilt #Effective resolution of the fields
@@ -73,9 +74,9 @@ def track(algo,indf,linst,lfile,**kwargs):
     track_parameter = [trackpar,"u_steer1","v_steer1","u_steer2","v_steer2","Zqual","Isuiv"]
 
     if "thr_core" in algo.varalgo:
-        thr_core = algo.varalgo["thr_core"] #Minimum value of track parameter (btir for instance) to detect the initial cores
+        thr_core = algo.varalgo["thr_core"] #Minimum value of track parameter (btir for instance) to detect the cores to be tracked
     else:
-        thr_core = 0.0
+        thr_core = thr_track
 
     if "pairing" in algo.specfields:
         pairpar, signpair = Tools.get_parsign(algo.specfields["pairing"], Hn)
@@ -102,6 +103,7 @@ def track(algo,indf,linst,lfile,**kwargs):
 
     #Initialisation of variables to start the loops
     ltraj=[] #Output list of trajectories
+    ltraj0=[] #Output list of trajectories
     dico_ker={} #Dictionary that contains the object candidates at the different instants
     zquald1=0.001
     zquald2=0.001
@@ -113,15 +115,18 @@ def track(algo,indf,linst,lfile,**kwargs):
     it=0
     while it<len(linst) and Inputs.check_file(lfile[it],indf,trackpar,trackpar):
 
+        #We could introduce here PARALLELISATION (PoolProcess)
         inst=linst[it]
         print(inst,lfile[it])
 
+        dict_fld = Tools.load_fld(lparam,lfile[it],linst[it],indf,algo,domtraj,res,basetime,subnproc,parfilt=parfilt,filtapply=filtapply) #input fields at the given instant
+
         #Finding all extremas
-        lobj = Search_allcores(algo.classobj,fic=lfile[it],inst=inst,indf=indf,trackpar=trackpar,signtrack=signtrack,domtraj=domtraj,res=res[trackpar],basetime=basetime,track_parameter=track_parameter,subnproc=subnproc,filtrad=parfilt[trackpar]*filtapply,dist=radmax, thr=thr_core)
+        lobj = Search_allcores(algo.classobj,dict_fld=dict_fld,inst=inst,trackpar=trackpar,signtrack=signtrack,track_parameter=track_parameter,dist=radmax, thr=thr_core)
 
         #Computation of steering flow parameters
-        u_steer1, v_steer1 = Tools.comp_steering(lobj,[lev1],uvmean_box,lfile[it],inst,indf,res,domtraj,basetime,parfilt,filtapply,subnproc)
-        u_steer2, v_steer2 = Tools.comp_steering(lobj,[lev2],uvmean_box,lfile[it],inst,indf,res,domtraj,basetime,parfilt,filtapply,subnproc)
+        u_steer1, v_steer1 = Tools.comp_steering(lobj,[lev1],uvmean_box,dict_fld)
+        u_steer2, v_steer2 = Tools.comp_steering(lobj,[lev2],uvmean_box,dict_fld)
         for ivi in range(len(lobj)):
             lobj[ivi].traps["u_steer1"] = u_steer1[ivi]
             lobj[ivi].traps["v_steer1"] = v_steer1[ivi]
@@ -129,47 +134,9 @@ def track(algo,indf,linst,lfile,**kwargs):
             lobj[ivi].traps["v_steer2"] = v_steer2[ivi]
             lobj[ivi].traps["Zqual"] = 0.0
             lobj[ivi].traps["Isuiv"] = 0
+        #END PARALLELISATION - Output: lobj
         
         dico_ker[str(it)] = lobj
-
-        #DEBUG - Plot champs et des points candidats (pour voir)
-        if DEBUGGING:
-            offset=200.0
-            sig=1
-            proj = ccrs.PlateCarree()
-            plon,plat=fld.geometry.get_lonlat_grid()
-            fig1=plt.figure(figsize=(30,15))
-            ax1 = plt.axes(projection = proj)
-            ax1.set_extent([domtraj["lonmin"], domtraj["lonmax"], domtraj["latmin"], domtraj["latmax"]])
-            ax1.add_feature(cfeature.OCEAN.with_scale('50m'))
-            ax1.add_feature(cfeature.COASTLINE.with_scale('50m'))
-            ax1.add_feature(cfeature.RIVERS.with_scale('50m'))
-            ax1.add_feature(cfeature.BORDERS.with_scale('50m'), linestyle=':')
-            ax1.coastlines()
-            gridlines = ax1.gridlines(draw_labels=True)
-            clev=[offset + x*(thr_track-offset)/5.0 for x in range(1,20)]
-            ax1.contourf(plon,plat,sig*fld.data,clev)
-            #Plot other field
-            #fld2 = Inputs.extract_data(lfile[it],linst[it],indf,"rr1h",domtraj,res["rr1h"],basetime,subnproc,filtrad=parfilt["rr1h"]*filtapply)
-            #plon2,plat2=fld2.geometry.get_lonlat_grid()
-            #clev2=[x for x in range(1,20)]
-            #ax1.contourf(plon2,plat2,fld2.data,clev2)
-            ax1.scatter(tlon,tlat,marker="x",c="k")
-            #Plot square
-            for ivi in range(len(tlat)):
-                x1=tlon[ivi]-ss/2.0
-                y1=tlat[ivi]-ss/2.0
-                ax1.plot([x1,x1],[y1,y1+ss])
-                ax1.plot([x1,x1+ss],[y1,y1])
-                ax1.plot([x1+ss,x1+ss],[y1,y1+ss])
-                ax1.plot([x1,x1+ss],[y1+ss,y1+ss])
-            plt.title(datetime.strftime(inst,"%Y%m%d%H"))
-            #Plot wind
-            #for ivi in range(len(tlat)):
-            #    plt.arrow(tlon[ivi],tlat[ivi],lobj[ivi].traps["u_steer1"]/10.0,lobj[ivi].traps["v_steer1"]/10.0,head_width=0.3)
-            #    plt.arrow(tlon[ivi],tlat[ivi],lobj[ivi].traps["u_steer2"]/10.0,lobj[ivi].traps["v_steer2"]/10.0,head_width=0.3,color='b')
-            fig1.savefig('fld'+str(it)+'.png')
-            plt.close()
 
         it = it + 1
 
@@ -279,27 +246,6 @@ def track(algo,indf,linst,lfile,**kwargs):
                         obj2.traps["Isuiv"] = 0
                         obj2.traps["Zqual"] = 0.0
 
-
-            #DEBUG
-            if DEBUGGING:
-                print("Plot "+'Pair'+str(jter)+'-'+str(it+1)+'.png...')
-                proj = ccrs.PlateCarree()
-                fig2=plt.figure(figsize=(30,15))
-                ax2 = plt.axes(projection = proj)
-                ax2.set_extent([domtraj["lonmin"], domtraj["lonmax"], domtraj["latmin"], domtraj["latmax"]])
-                ax2.add_feature(cfeature.OCEAN.with_scale('50m'))
-                ax2.add_feature(cfeature.COASTLINE.with_scale('50m'))
-                ax2.add_feature(cfeature.RIVERS.with_scale('50m'))
-                ax2.add_feature(cfeature.BORDERS.with_scale('50m'), linestyle=':')
-                #gridlines = ax2.gridlines(draw_labels=True)
-                #ax2.coastlines()
-                plt.title(datetime.strftime(linst[it+1],"%Y%m%d%H"))
-                for obj2 in dico_ker[str(it+1)]:
-                    plt.text(obj2.lonc,obj2.latc,str(obj2.traps["Isuiv"]))
-                fig2.savefig('Pair'+str(jter)+'-'+str(it+1)+'.png')
-                plt.close()
-
-
             #Numbering of all unpaired kernels at time it+1
             for obj2 in dico_ker[str(it+1)]:
                 if obj2.traps["Isuiv"]==0:
@@ -339,28 +285,34 @@ def track(algo,indf,linst,lfile,**kwargs):
             print("Max value along the track: "+str(maxv))
             print("Duration (h) of the track: "+str(traj.tlen(unit="h")))
             if blen and bmax:
-                traj2=DefTrack(algo.classobj,basetime=basetime)
-                inam=inam+1
-                #Give name to traj
-                traj2.name="AY-"+basetime+ '-' +str(inam)
-                #Correction of position if a mslp minimum is found - Computation of diagnostics
-                for obj in traj.traj:
-                    it = Tools.get_time_index(linst,obj.time)
-                    if not pairpar == "":
-                        obj_pair = obj.search_core(lfile[it],linst[it],pairpar,Hn,indf,algo,domtraj,res,parfilt,filtapply,track_parameter,basetime,subnproc,diag_parameter,ss=ss,thr_param=thr_pairing,pairing=True,smooth=True)
+                ltraj0.append(traj)
 
+    for traj in ltraj0:
+        traj2=DefTrack(algo.classobj,basetime=basetime)
+        inam=inam+1
+        #Give name to traj
+        traj2.name="AY-"+basetime+ '-' +str(inam)
+        ltraj.append(traj2)
+
+    for it in range(len(linst)):
+        dict_fld = Tools.load_fld(lparam,lfile[it],linst[it],indf,algo,domtraj,res,basetime,subnproc,parfilt=parfilt,filtapply=filtapply) #input diag fields at the given instant
+        for ir in range(len(ltraj0)):
+            #Correction of position if a mslp minimum is found - Computation of diagnostics
+            for io in range(ltraj0[ir].nobj):
+                obj=ltraj0[ir].traj[io]
+                traj2=ltraj[ir]
+                if Tools.comp_difftime(ltraj0[ir].traj[io].time,linst[it])==0:
+                    if not pairpar == "":
+                        obj_pair = obj.search_core(dict_fld,linst[it],pairpar,Hn,track_parameter,diag_parameter,ss=ss,thr_param=thr_pairing,pairing=True,smooth=True)
                         if obj_pair is not None:
                             obj_pair.traps[trackpar] = obj.traps[trackpar]
-                            traj2.add_obj(obj_pair)
+                            traj2.add_obj(copy.deepcopy(obj_pair))
                         else:
-                            Tools.make_diags(diag_parameter,obj,lfile[it],linst[it],indf,domtraj,Hn,res,basetime,obj.lonc,obj.latc,subnproc,parfilt=parfilt,filtapply=filtapply) #Add diagnostics in traj
-                            traj2.add_obj(obj)
+                            Tools.make_diags(diag_parameter,obj,dict_fld,obj.lonc,obj.latc) #Add diagnostics in traj
+                            traj2.add_obj(copy.deepcopy(obj))
                     else:
-                        Tools.make_diags(diag_parameter,obj,lfile[it],linst[it],indf,domtraj,Hn,res,basetime,obj.lonc,obj.latc,subnproc,parfilt=parfilt,filtapply=filtapply) #Add diagnostics in traj
-                        traj2.add_obj(obj)
-
-
-                ltraj.append(traj2)
+                        Tools.make_diags(diag_parameter,obj,dict_fld,obj.lonc,obj.latc) #Add diagnostics in traj
+                        traj2.add_obj(copy.deepcopy(obj))
 
     return ltraj
 

@@ -35,7 +35,7 @@ from traject import *
 def track(algo,indf,linst,lfile,**kwargs):
 
     #Initialisation of domtraj, diag_parameter, deltat depending on the input parameters
-    domtraj, res, deltat, Hn, diag_parameter, subnproc = Tools.init_algo(algo,indf,linst,lfile,**kwargs)
+    domtraj, res, deltat, Hn, diag_parameter, lparam, subnproc = Tools.init_algo(algo,indf,linst,lfile,**kwargs)
 
     #Tracking variables used by the algorithm
     max_dist = max(algo.varalgo["maxdist"],algo.varalgo["maxspeed"]*deltat)
@@ -83,7 +83,8 @@ def track(algo,indf,linst,lfile,**kwargs):
         while not gook and it0<len(linst2)-1: #Search for starting point
             it0=it0+1
             refobj, gook =reftraj.find_inst(linst2[it0]) #Attention, delta t différent !!
-            obj = refobj[0].search_core(lfile[it0],linst[it0],trackpar,Hn,indf,algo,domtraj,res,[],0,track_parameter,basetime,subnproc,diag_parameter,max_dist=max_dist)
+            dict_fld = Tools.load_fld(lparam,lfile[it0],linst[it0],indf,algo,domtraj,res,basetime,subnproc) #input fields at the given instant
+            obj = refobj[0].search_core(dict_fld,linst[it0],trackpar,Hn,[],diag_parameter,max_dist=max_dist)
 
         #------------------------------------------------------------------------------
                         # First step: Start the track from the closest point to reftraj
@@ -106,7 +107,8 @@ def track(algo,indf,linst,lfile,**kwargs):
             instm1=linst[it-1]
             inst=linst[it]
             objm1,fnd=traj.find_inst(instm1)
-            obj = objm1[0].search_core(lfile[it],linst[it],trackpar,Hn,indf,algo,domtraj,res,[],0,track_parameter,basetime,subnproc,diag_parameter,max_dist=max_dist)
+            dict_fld = Tools.load_fld(lparam,lfile[it],linst[it],indf,algo,domtraj,res,basetime,subnproc) #input fields at the given instant
+            obj = objm1[0].search_core(dict_fld,linst[it],trackpar,Hn,[],diag_parameter,max_dist=max_dist)
 
             if obj is not None:
                 #CREATE POINT ON THE TRACK

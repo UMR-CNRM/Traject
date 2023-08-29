@@ -2,13 +2,13 @@
         "classobj": "Centre0D",
         "nameobj":"Cyclone",
 	"name": "VDGfree",
-	"varalgo": {"last_start":12,"thr_track":1e-4,"thr_pairing":101000.0,"ss":4,"w":0.5,"steering_levels":[850,700,500],"uvmean_box":4,"radmax":800.0},
+	"varalgo": {"last_start":12,"thr_core":-5e-5,"thr_track":-1e-4,"thr_pairing":101000.0,"ss":4,"w":0.5,"steering_levels":[850,700,500],"uvmean_box":4,"radmax":800.0},
 	"domtraj":{"lonmin":-30.0,"lonmax":90.0,"latmin":-40.0,"latmax":-5.0},
-	"parfilt":{"rv850":100.0,"u850":50.0,"v850":50.0,"u700":50.0,"v700":50.0,"u500":50.0,"v500":50.0,"mslp":0,"z200":50.0,"z1000":50.0,"t500":50.0,"t400":50.0,"t300":50.0,"t200":50.0},
+	"parfilt":{"rv850":50.0,"u850":50.0,"v850":50.0,"u700":50.0,"v700":50.0,"u500":50.0,"v500":50.0,"mslp":0,"z200":50.0,"z1000":50.0,"t500":50.0,"t400":50.0,"t300":50.0,"t200":50.0},
 	"parres":{"all":0.25},
 	"specfields":{"track":"rv850","pairing":"mslp"},
 	"diag_parameter":["mslp_p"],
         "conditiontype":{"casetype":"TCVitart97","nameobj":"TC","when":"all","exclude":"True"},
-	"parallel":{"subnproc":4}
+	"parallel":{"subnproc":1}
 }
 

@@ -59,10 +59,10 @@ timefc={'start':"2023021800",'final':"2023022100",'step':"72"}
 #PrepareFiles(repin+"algo_testcase5.json",repout+"indef_xtract.json",{"filter":"./tmp/case5/","dirout":repout},timefc,termtraj={'final':48,'step':3})
 
 #The tracking may be computed with 2 options: "" (ALGO_VDG) or "free" (ALGO_VDGfree). They should provide the same results
-opt=""
+#opt=""
 opt="free"
 #a/ Compute track using the extracted grib files
-ltraj=track(repin+"algo_testcase5"+opt+".json",repout+"indef_xtract.json",timefc,termtraj={'final':48,'step':3},reftraj=ibfile,outfile=repout+'track_test_case5a_v'+str(traject_version)+'.json',plotfile=repout+'track_test_case5a_v'+str(traject_version)+'.png')
+ltraj=track(repin+"algo_testcase5"+opt+".json",repout+"indef_xtract.json",timefc,termtraj={'final':48,'step':3},reftraj=ibfile,outfile=repout+'track_test_case5a_v'+str(traject_version)+opt+'.json',plotfile=repout+'track_test_case5a_v'+str(traject_version)+opt+'.png')
 
 #b/ Compute track using the filtered files
 #ltraj=track(repin+"algo_testcase5"+opt+".json",repout+"indef_filter.json",timefc,termtraj={'final':48,'step':3},reftraj=ibfile,outfile=repout+'track_test_case5b_v'+str(traject_version)+'.json',plotfile=repout+'track_test_case5b_v'+str(traject_version)+'.png')
@@ -76,6 +76,8 @@ if False:
     for ivi in range(len(ltraj)):
         print("Reading the track afterwards :")
         print(ltraj2[ivi].__dict__)
+
+exit()
 
 #Plotting tracks
 from visu_traject import *

@@ -370,7 +370,7 @@ def track(algo,indf,timetraj,**kwargs):
                 for imb in range(nmb):
 
                     if ntasks==1: #No parallelisation
-                        print("No Parallelisation")
+                        print("No Upper-level Parallelisation")
                         outf.append(track_parallel_fc(myalgo_func,0,algo2,indf2,basetime,lmb,imb,reftraj,**kwargs))
                     else: #Parallelisation
                         tsk = tsk + 1
@@ -408,13 +408,16 @@ def track(algo,indf,timetraj,**kwargs):
         exit()
 
     #Writing outputfile file if outfile is specified
-    if "outfile" in kwargs and len(trajlist)>0:
+    if "outfile" in kwargs:
         outfile = kwargs["outfile"]
-        print("Write tracks in "+ outfile)
-        if os.path.exists(outfile):
-            os.remove(outfile)
-        for i in range(len(trajlist)):
-            Write(trajlist[i],outfile,algo2,indfw[i],mode="a")
+        if len(trajlist)>0:
+            print("Write tracks in "+ outfile)
+            if os.path.exists(outfile):
+                os.remove(outfile)
+            for i in range(len(trajlist)):
+                Write(trajlist[i],outfile,algo2,indfw[i],mode="a")
+        else:
+            Write([],outfile)
 
     #Plotting tracks if plotfile is specified
     if "plotfile" in kwargs and len(trajlist)>0:
@@ -601,24 +604,32 @@ def Write(traj,outputfile,algo={},indf={},write_diag=True,mode='a'):
     #Some indf and algo information can also be written in the file
     #Output: file (JSON format)
 
-    #Create data in a dictionary format
-    __import__("OBJ_"+traj.classobj)
-    wdict = write_header(traj,algo,indf)
-    if wdict["algodef"]=={}:
-        wdict.pop("algodef")
-    wdict.update({"traj":traj.write(write_diag)})
+    if isinstance(traj,list):
+        if len(traj)==0:
+            with open(outputfile, 'w') as fout:
+                json.dump([],fout)
+        else:
+            print("Write only empty list or single track - ABORT")
+            exit()
+    else:
+        #Create data in a dictionary format
+        __import__("OBJ_"+traj.classobj)
+        wdict = write_header(traj,algo,indf)
+        if wdict["algodef"]=={}:
+            wdict.pop("algodef")
+        wdict.update({"traj":traj.write(write_diag)})
 
-    result = list()
+        result = list()
 
-    if mode=='w' or not os.path.exists(outputfile): #A new data is created
-        result=[wdict]
-    else: #json data is merged (as a list)
-        with open(outputfile, 'r') as infile:
-            result.extend(json.load(infile))
-        result.extend([wdict])
+        if mode=='w' or not os.path.exists(outputfile): #A new data is created
+            result=[wdict]
+        else: #json data is merged (as a list)
+            with open(outputfile, 'r') as infile:
+                result.extend(json.load(infile))
+            result.extend([wdict])
 
-    with open(outputfile, 'w') as fout:
-        json.dump(result, fout, indent=4)
+        with open(outputfile, 'w') as fout:
+            json.dump(result, fout, indent=4)
 
 
 def Read(inputfile,select=["all"]):
@@ -631,12 +642,9 @@ def Read(inputfile,select=["all"]):
     lname=inputfile.split('.')
     filefmt=lname[-1]
     filename=inputfile.replace('.'+filefmt,'')
-    #print(filename,filefmt)
     if filefmt.lower()=="json":
-        #print("JSON file")
         json_file = open(inputfile)
         datain = json.load(json_file)
-        #print(datain[0]["inputdef"])
 
         ltraj=list()
         for i in range(len(datain)):

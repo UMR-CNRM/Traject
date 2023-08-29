@@ -97,7 +97,9 @@ def init_algo(algo,indf,linst,lfile,**kwargs):
             diag=diagdef(diagname,Hn,ss,rd)
             ldiag.append(diag)
 
-    return domtraj, dres, deltat, Hn, ldiag, subnproc
+    lparam = list(algo.parfilt.keys())
+
+    return domtraj, dres, deltat, Hn, ldiag, lparam, subnproc
 
 #--------------------------------------------------------------------------#
 
@@ -379,7 +381,7 @@ def get_dom_limits(ltraj, diag, res):
 #--------------------------------------------------------------------------#
 
 
-def comp_steering(lobj,steering_levels,uvmean_box,filin,inst,indf,res,domtraj,basetime,parfilt,filtapply,subnproc,pos=""):
+def comp_steering(lobj,steering_levels,uvmean_box,dict_fld,pos=""):
     #Compute steering flow at levels steering_levels at the location (lon,lat) - lon, lat can be single or list of values
     #If filtrad > 0.0, the steering flow is computed at equivalent resolution filtrad (in km),
     #filin is the input file, and indf the inputdef data
@@ -407,15 +409,15 @@ def comp_steering(lobj,steering_levels,uvmean_box,filin,inst,indf,res,domtraj,ba
         v_steer0=[0.0 for ivi in range(npts)]
     else:
         ch='u'+str(int(lev))
-        fu = Inputs.extract_data(filin,inst,indf,ch,domtraj,res[ch],basetime,subnproc,filtrad=parfilt[ch]*filtapply)
+        fu = dict_fld[ch]
         ch='v'+str(int(lev))
-        fv = Inputs.extract_data(filin,inst,indf,ch,domtraj,res[ch],basetime,subnproc,filtrad=parfilt[ch]*filtapply)
+        fv = dict_fld[ch]
         for ivi in range(1,nlev):
             lev=steering_levels[ivi]
             ch='u'+str(int(lev))
-            fu.operation("+",Inputs.extract_data(filin,inst,indf,ch,domtraj,res[ch],basetime,subnproc,filtrad=parfilt[ch]*filtapply))
+            fu.operation("+",dict_fld[ch])
             ch='v'+str(int(lev))
-            fv.operation("+",Inputs.extract_data(filin,inst,indf,ch,domtraj,res[ch],basetime,subnproc,filtrad=parfilt[ch]*filtapply))
+            fv.operation("+",dict_fld[ch])
         fu.operation("/",nlev)
         fv.operation("/",nlev)
 
@@ -690,7 +692,7 @@ def get_res(fld):
     return abs(ll[1]-ll[0])
 
 #--------------------------------------------------------------------------#
-def find_allmin(fld,dist=maxval,thr=0.0):
+def find_allmin(fld,dist=maxval,thr=maxval):
     #Finds the local minima in field fld, that are below thr
     #if several minima are inside a dist radius (km),
     #we keep the one with highest absolute value
@@ -747,13 +749,15 @@ def find_allmin(fld,dist=maxval,thr=0.0):
     return tlon,tlat,tval
 
 #--------------------------------------------------------------------------#
-def find_allmax(fld,dist=maxval,thr=0.0):
+def find_allmax(fld,dist,thr):
         #Finds the local maxima in field fld that are above thr
         #if several minima are inside a dist radius (km),
         #we keep the one with highest absolute value
 
     fld.data=-fld.data
-    tlon,tlat,tval = find_allmin(fld,dist=dist,thr=thr)
+    if thr==maxval:
+        thr=-maxval
+    tlon,tlat,tval = find_allmin(fld,dist=dist,thr=-thr)
     fld.data=-fld.data
 
     tval1 = [-tval[i] for i in range(len(tval))]
@@ -761,13 +765,15 @@ def find_allmax(fld,dist=maxval,thr=0.0):
     return tlon,tlat,tval1
 
 #--------------------------------------------------------------------------#
-def find_allextr(sign, fld, dist=maxval, thr=0.0):
+def find_allextr(sign, fld, dist=maxval, thr=maxval):
     #Finds the local maxima if sign=1, minima if sign=-1, respectively
+    #if sign=1, finds the max (in that case the value must be above thr)
+    #if sign=-1, finds the min (in that case the value must be below thr)
     
     if sign==-1:
-        tlon, tlat, tval = find_allmin(fld,dist=dist,thr=thr)
+        tlon, tlat, tval = find_allmin(fld,dist,thr)
     elif sign==1:
-        tlon, tlat, tval = find_allmax(fld,dist=dist,thr=thr)
+        tlon, tlat, tval = find_allmax(fld,dist,thr)
     else:
         print('Error in Tools.find_allextr: wrong sign (should be -1 or 1)')
 
@@ -956,7 +962,7 @@ def find_locmin(fld, lon0 ,lat0 ,ss=0 , thr=maxval ):
     return lon1, lat1, valmin, dmin, gook
 
 #--------------------------------------------------------------------------#
-def find_locmax(fld, lon0, lat0, ss=0, thr=maxval):
+def find_locmax(fld, lon0, lat0, ss, thr):
     #Finds the closest local max in field fld to the point (lon0,lat0)
     #which value is above thr
     
@@ -969,7 +975,7 @@ def find_locmax(fld, lon0, lat0, ss=0, thr=maxval):
     return lon1, lat1, -val, dmin, gook
 
 #--------------------------------------------------------------------------#
-def find_amax(fld, lon0, lat0, ss=0, thr=maxval):
+def find_amax(fld, lon0, lat0, ss, thr):
     #Finds a local max in field fld close to the point (lon0,lat0)
     #which value is above thr and with the maximum value
     
@@ -984,11 +990,13 @@ def find_amax(fld, lon0, lat0, ss=0, thr=maxval):
 #--------------------------------------------------------------------------#
 def find_locextr(sign, fld, lon0, lat0, ss=0, thr=maxval):
     #Finds the closest local max if sign=1, min if sign=-1, respectively
+    #if sign=1, finds the max (in that case the value must be above thr)
+    #if sign=-1, finds the min (in that case the value must be below thr)
     
     if sign==-1:
-        lon1, lat1, valmin, dmin, gook = find_locmin(fld,lon0,lat0,ss=ss,thr=thr)
+        lon1, lat1, valmin, dmin, gook = find_locmin(fld,lon0,lat0,ss,thr)
     elif sign==1:
-        lon1, lat1, valmin, dmin, gook = find_locmax(fld,lon0,lat0,ss=ss,thr=thr)
+        lon1, lat1, valmin, dmin, gook = find_locmax(fld,lon0,lat0,ss,thr)
     else:
         print('Error in Tools.find_locextr: wrong sign (should be -1 or 1)')
 
@@ -997,12 +1005,13 @@ def find_locextr(sign, fld, lon0, lat0, ss=0, thr=maxval):
 #--------------------------------------------------------------------------#
 def find_aextr(sign, fld, lon0, lat0, ss=0, thr=maxval):
     #Finds the local max if sign=1, min if sign=-1, respectively
-    #which value is above thr and with the highest value
+    #if sign=1, finds the max (in that case the value must be above thr) with the highest value
+    #if sign=-1, finds the min (in that case the value must be below thr) with the lowest value
     
     if sign==-1:
-        lon1, lat1, valmin, dmin, gook = find_amin(fld,lon0,lat0,ss=ss,thr=thr)
+        lon1, lat1, valmin, dmin, gook = find_amin(fld,lon0,lat0,ss,thr)
     elif sign==1:
-        lon1, lat1, valmin, dmin, gook = find_amax(fld,lon0,lat0,ss=ss,thr=thr)
+        lon1, lat1, valmin, dmin, gook = find_amax(fld,lon0,lat0,ss,thr)
     else:
         print('Error in Tools.find_extr: wrong sign (should be -1 or 1)')
 
@@ -1282,20 +1291,12 @@ def guess_diag(strdiag,Hn):
 
     return diag
 
-def make_diags(ldiag,obj,filin,inst,indf,domtraj,Hn,res,basetime,olon,olat,subnproc,**kwargs):
+def make_diags(ldiag,obj,dict_fld,olon,olat,**kwargs):
     #olon, olat: origin points (tracking parameter)
 
     for diag in ldiag:
         obj.diags.append(diag.strg)
-        if "parfilt" in kwargs and "filtapply" in kwargs:
-            if kwargs["filtapply"]==0:
-                filtrad=0.0
-            else:
-                parfilt=kwargs["parfilt"]
-                filtrad=parfilt[diag.par]*kwargs["filtapply"]
-        else:
-            filtrad=0.0
-        fld=Inputs.extract_data(filin,inst,indf,diag.par,domtraj,res[diag.par],basetime,subnproc,filtrad=filtrad)
+        fld=dict_fld[diag.par]
         if diag.area=="o":
             val= fld.getvalue_ll(olon,olat,interpolation="linear")
             setattr(obj,diag.strg,[olon, olat, val])
@@ -1442,3 +1443,21 @@ def max_diag(par, traj, indf, dom, res, mintime, maxtime, basetime,subnproc=1):
 
     return val, lon, lat, time
 
+def load_fld(lparam,fic,inst,indf,algo,domtraj,res,basetime,subnproc,**kwargs):
+    #Returns a dictionay with all input fields of lparam
+
+    if "parfilt" in kwargs:
+        parfilt = kwargs["parfilt"]
+    else:
+        parfilt = []
+
+    dict_fld={}
+    for par in lparam:
+        if "filtapply" in kwargs and par in parfilt:
+            filtrad=parfilt[par]*kwargs["filtapply"]
+        else:
+            filtrad=0
+
+        dict_fld[par] = Inputs.extract_data(fic,inst,indf,par,domtraj,res[par],basetime,subnproc,filtrad=filtrad)
+
+    return dict_fld
