@@ -2,7 +2,7 @@
         "classobj": "Centre0D",
         "nameobj":"Cyclone",
 	"name": "AYRAULT",
-	"varalgo": {"radmax":225.0,"speedmax":200.0,"ss":2,"niter":2,"pdmin":0.2,"AVOr":2e-4,"pvmin":0.6,"mintlen":24,"thr_track":1e-4,"thr_pairing":101000.0,"pdmin":0.2,"pvmin":0.6,"steering_levels":[850,700],"accbool":"True","accfct":1.0},
+	"varalgo": {"radmax":225.0,"speedmax":200.0,"ss":2,"niter":2,"pdmin":0.2,"AVOr":2e-4,"pvmin":0.6,"mintlen":24,"thr_core":0,"thr_track":1e-4,"thr_pairing":101000.0,"pdmin":0.2,"pvmin":0.6,"steering_levels":[850,700],"accbool":"True","accfct":1.0},
 	"domtraj":{"lonmin":-30.0,"latmin":35.0,"lonmax":20.0,"latmax":60.0},
 	"parfilt":{"rv850":250.0,"u850":250.0,"v850":250.0,"u700":250.0,"v700":250.0,"mslp":0},
 	"parres":{"rv850":1.0,"u850":1.0,"v850":1.0,"u700":1.0,"v700":1.0,"mslp":0},

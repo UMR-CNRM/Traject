@@ -245,8 +245,8 @@ class ObjectM:
         if diag=="":
             dkind=""
             ldiag=[]
-            lonm=obj.lonc
-            latm=obj.latm
+            lonm=self.lonc
+            latm=self.latc
         else:
             Hn = (lats[0]>=0.0) #Northern Hemisphere
             dd = Tools.guess_diag(diag,Hn)
@@ -288,7 +288,7 @@ class ObjectM:
 
             ## Some routines for object detection around a guess
 
-    def search_core(self,fic,inst,param,Hn,indf,algo,domtraj,res,parfilt,filtapply,track_parameter,basetime,subnproc,ldiag,**kwargs):
+    def search_core(self,dict_fld,inst,param,Hn,track_parameter,ldiag,**kwargs):
         #Search core (local extremum) in field at a distance below dist_max and,
         #if successful, creates the associated object
         #Returns None if no valid detection
@@ -298,13 +298,7 @@ class ObjectM:
           #inst: instant
           #param:field parameter
           #Hn:Hemisphere
-          #indf,algo:inputdef,algodef
-          #domtraj:domain
-          #res: resolutions
-          #parfilt,filtapply: filtering parameters
           #track_parameter
-          #basetime
-          #subnproc
           #ldiag: if not [], computes the list of diagnostics in ldiag
           #kwargs: criterions for detection
                 #max_dist:maximal distance where to search extremum
@@ -315,10 +309,6 @@ class ObjectM:
 
         #initialisation
         trackpar, signtrack = Tools.get_parsign(param, Hn)
-        if filtapply==0:
-            filtrad=0.0
-        else:
-            filtrad=parfilt[trackpar]*filtapply
         chk_dist=False
         ss=1000
         thr_track=Tools.maxval
@@ -337,7 +327,7 @@ class ObjectM:
         if "pairing" in kwargs:
             pairing=kwargs["pairing"]
 
-        fld = Inputs.extract_data(fic,inst,indf,trackpar,domtraj,res[trackpar],basetime,subnproc,filtrad=filtrad)
+        fld = dict_fld[trackpar]
         lon,lat,val,dist,gook = Tools.find_locextr(signtrack,fld,self.lonc,self.latc,ss=ss,thr=thr_track)
 
         if gook and ((not chk_dist) or (dist<=max_dist)):
@@ -352,16 +342,16 @@ class ObjectM:
             #DIAGNOSTIC PARAMETERS
                 #if ldiag is [], Tools.make_diag gets out quickly
             if pairing:
-                Tools.make_diags(ldiag,objectm,fic,inst,indf,domtraj,Hn,res,basetime,self.lonc,self.latc,subnproc,parfilt=parfilt,filtapply=filtapply)
+                Tools.make_diags(ldiag,objectm,dict_fld,self.lonc,self.latc)
             else:
-                Tools.make_diags(ldiag,objectm,fic,inst,indf,domtraj,Hn,res,basetime,lon,lat,subnproc,parfilt=parfilt,filtapply=filtapply)
+                Tools.make_diags(ldiag,objectm,dict_fld,lon,lat)
 
         else:
             objectm=None
 
         return objectm
 
-    def conditiontype(self,fic,inst,indf,algo,domtraj,res,parfilt,filtapply,basetime,subnproc,init=False):
+    def conditiontype(self,dict_fld,algo,domtraj,init=False):
         #Determines if the object satisfies a condition type
         #init : if it is the first obj in the track
         #Output : isok (True is the object is of the type)
@@ -386,10 +376,10 @@ class ObjectM:
                         dz = -500 #derivative criterion on thickness (500 mgp)
 
                         #Extraction of fields
-                        t200 = Inputs.extract_data(fic,inst,indf,"t200",domtraj,res["t200"],basetime,subnproc,filtrad=parfilt["t200"]*filtapply)
-                        t300 = Inputs.extract_data(fic,inst,indf,"t300",domtraj,res["t300"],basetime,subnproc,filtrad=parfilt["t300"]*filtapply)
-                        t400 = Inputs.extract_data(fic,inst,indf,"t400",domtraj,res["t400"],basetime,subnproc,filtrad=parfilt["t400"]*filtapply)
-                        t500 = Inputs.extract_data(fic,inst,indf,"t500",domtraj,res["t500"],basetime,subnproc,filtrad=parfilt["t500"]*filtapply)
+                        t200 = dict_fld["t200"]
+                        t300 = dict_fld["t300"]
+                        t400 = dict_fld["t400"]
+                        t500 = dict_fld["t500"]
 
                         #Computation of warm core criterion
                         tmean=t200
@@ -411,8 +401,8 @@ class ObjectM:
 
                         #Computation of geopotential criterion (if isok)
                         if isok:
-                            z200 = Inputs.extract_data(fic,inst,indf,"z200",domtraj,res["z200"],basetime,subnproc,filtrad=parfilt["z200"]*filtapply)
-                            z1000 = Inputs.extract_data(fic,inst,indf,"z1000",domtraj,res["z1000"],basetime,subnproc,filtrad=parfilt["z1000"]*filtapply)
+                            z200 = dict_fld["z200"]
+                            z1000 = dict_fld["z1000"]
                             z200.operation('-',z1000) #thickness
                             lon,lat,val,dist,gook = Tools.find_locextr(1,z200,self.lonc,self.latc,ss=4,thr=0.0)
                             if gook and (dist<distmax):
@@ -671,13 +661,13 @@ class Track:
         return val
 
 #Some routines
-def search_allcores(fic,inst,indf,trackpar,signtrack,domtraj,res,basetime,track_parameter,subnproc,filtrad=0.0,dist=Tools.maxval, thr=Tools.maxval):
+def search_allcores(dict_fld,inst,trackpar,signtrack,track_parameter,dist=Tools.maxval, thr=Tools.maxval):
     #Search for all objects in a domain
     #that are at a minimal distance of radmax one to the other
     #and above thr_core
     #Output : list of objects
 
-    fld = Inputs.extract_data(fic,inst,indf,trackpar,domtraj,res,basetime,subnproc,filtrad=filtrad)
+    fld = dict_fld[trackpar]
     tlon, tlat, tval = Tools.find_allextr(signtrack, fld, dist=dist, thr=thr)
     lobj=[]
     for ivi in range(len(tlat)):

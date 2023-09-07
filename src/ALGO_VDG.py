@@ -33,7 +33,7 @@ DEBUGGING=False
 def track(algo,indf,linst,lfile,**kwargs):
 
     #Initialisation of domtraj, res, deltat depending on the input parameters
-    domtraj, res, deltat, Hn, diag_parameter, subnproc = Tools.init_algo(algo,indf,linst,lfile,**kwargs)
+    domtraj, res, deltat, Hn, diag_parameter, lparam, subnproc = Tools.init_algo(algo,indf,linst,lfile,**kwargs)
 
     #Tracking variables used by the algorithm
     parfilt=algo.parfilt #Effective resolution of the fields
@@ -61,6 +61,11 @@ def track(algo,indf,linst,lfile,**kwargs):
 
     thr_track = algo.varalgo["thr_track"] #Minimum absolute value of tracked core
     thr_pair = algo.varalgo["thr_pairing"] #Minimum value of paired core
+
+    if "thr_core" in algo.varalgo:
+        thr_core = algo.varalgo["thr_core"] #Minimum value of track parameter (btir for instance) to detect the initial cores
+    else:
+        thr_core = thr_track
 
     track_parameter = [trackpar,pairpar,"olon","olat","u_speed","v_speed","u_steer","v_steer"] #olon, olat : coordinates of the trackpar extrema, used for tracking
 
@@ -104,15 +109,15 @@ def track(algo,indf,linst,lfile,**kwargs):
         exclude=False
         while not gook and it0<len(linst2)-1:
             it0=it0+1
-            print(it0)
             refobj, gook1 =reftraj.find_inst(linst2[it0]) #Attention, delta t différent !!
             if gook1: # Tracking main core
-                obj = refobj[0].search_core(lfile[it0],linst[it0],trackpar,Hn,indf,algo,domtraj,res,parfilt,filtapply,track_parameter,basetime,subnproc,[],ss=ss,thr_param=thr_track)
+                dict_fld = Tools.load_fld(lparam,lfile[it0],linst[it0],indf,algo,domtraj,res,basetime,subnproc,parfilt=parfilt,filtapply=filtapply) #input fields at the given instant
+                obj = refobj[0].search_core(dict_fld,linst[it0],trackpar,Hn,track_parameter,[],ss=ss,thr_param=thr_core)
                 obj2 = None
                 if obj is not None: # Pairing
-                    obj2 = obj.search_core(lfile[it0],linst[it0],pairpar,Hn,indf,algo,domtraj,res,parfilt,filtapply,track_parameter,basetime,subnproc,diag_parameter,ss=ss,thr_param=thr_pair,pairing=True,smooth=True)
+                    obj2 = obj.search_core(dict_fld,linst[it0],pairpar,Hn,track_parameter,diag_parameter,ss=ss,thr_param=thr_pair,pairing=True,smooth=True)
                     if obj2 is not None:
-                        isok, exclude = obj2.conditiontype(lfile[it0],linst[it0],indf,algo,domtraj,res,parfilt,filtapply,basetime,subnproc,init=True)
+                        isok, exclude = obj2.conditiontype(dict_fld,algo,domtraj,init=True)
             gook = obj is not None and obj2 is not None and not exclude
 
         if gook: #A 
@@ -126,7 +131,7 @@ def track(algo,indf,linst,lfile,**kwargs):
             #Initialisations of obj2 variables and addition to traj
             obj2.traps["olon"]=obj.lonc
             obj2.traps["olat"]=obj.latc
-            u_steer, v_steer = Tools.comp_steering(obj2,steering_levels,uvmean_box,lfile[it0],linst2[it0],indf,res,domtraj,basetime,parfilt,filtapply,subnproc,pos="o")
+            u_steer, v_steer = Tools.comp_steering(obj2,steering_levels,uvmean_box,dict_fld,pos="o")
 
             obj2.traps["u_steer"] = u_steer
             obj2.traps["v_steer"] = v_steer
@@ -156,19 +161,20 @@ def track(algo,indf,linst,lfile,**kwargs):
             obj_guess = objm1.advect(inst, (1-w)*objm1.traps["u_steer"]+ w*objm1.traps["u_speed"],
                 (1-w)*objm1.traps["v_steer"]+ w*objm1.traps["v_speed"],pos="o")
 
-            obj = obj_guess.search_core(lfile[it],linst[it],trackpar,Hn,indf,algo,domtraj,res,parfilt,filtapply,track_parameter,basetime,subnproc,[],ss=ss,thr_param=thr_track)
+            dict_fld = Tools.load_fld(lparam,lfile[it],linst[it],indf,algo,domtraj,res,basetime,subnproc,parfilt=parfilt,filtapply=filtapply) #input fields at the given instant
+            obj = obj_guess.search_core(dict_fld,linst[it],trackpar,Hn,track_parameter,[],ss=ss,thr_param=thr_core)
             obj2 = None
             if obj is not None: # Pairing
-                obj2 = obj.search_core(lfile[it],linst[it],pairpar,Hn,indf,algo,domtraj,res,parfilt,filtapply,track_parameter,basetime,subnproc,diag_parameter,ss=ss,thr_param=thr_pair,pairing=True,smooth=True)
+                obj2 = obj.search_core(dict_fld,linst[it],pairpar,Hn,track_parameter,diag_parameter,ss=ss,thr_param=thr_pair,pairing=True,smooth=True)
                 if obj2 is not None:
-                    isok, exclude = obj2.conditiontype(lfile[it],linst[it],indf,algo,domtraj,res,parfilt,filtapply,basetime,subnproc,init=False)
+                    isok, exclude = obj2.conditiontype(dict_fld,algo,domtraj,init=False)
             gook = obj is not None and obj2 is not None and not exclude
 
             if gook:
                 #Initialisations of obj2 variables and addition to traj
                 obj2.traps["olon"]=obj.lonc
                 obj2.traps["olat"]=obj.latc
-                u_steer, v_steer = Tools.comp_steering(obj2,steering_levels,uvmean_box,lfile[it],linst[it],indf,res,domtraj,basetime,parfilt,filtapply,subnproc,pos="o")
+                u_steer, v_steer = Tools.comp_steering(obj2,steering_levels,uvmean_box,dict_fld,pos="o")
                 u_speed, v_speed = obj2.comp_mvt(objm1,pos="o")
                 obj2.traps["u_steer"] = u_steer
                 obj2.traps["v_steer"] = v_steer
