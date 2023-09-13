@@ -862,7 +862,7 @@ def match_tracks(ltraj, dist, mininst, minmb, prefname):
             if "member" not in tk.inputdef:
                 tk.inputdef["member"]=""
             
-        idcd= [tk.basetime+tk.inputdef["member"] for tk in ltraj] #identifier of each trajectory
+        idcd= [tk.basetime+tk.inputdef["member"] for tk in ltraj2] #identifier of each trajectory
 
         #
         print(" ----- Start match ------")
