@@ -548,7 +548,10 @@ def set_dom_limits(ltraj,opt,diag="",diagrad=0.0,dom=[]):
         lonmax=domtraj["lonmax"]
         latmin=domtraj["latmin"]
         latmax=domtraj["latmax"]
-    elif opt=="zoom":
+    elif opt[0:4]=="zoom":
+        deltall=0
+        if "+" in opt:
+            deltall=float(opt.split('+')[1])
         print("zoom")
         llon=[]
         llat=[]
@@ -575,10 +578,10 @@ def set_dom_limits(ltraj,opt,diag="",diagrad=0.0,dom=[]):
         #Compute length of grid and grid boundaries
             #print(opt,llon, llat)
             dyy = Tools.comp_length(np.mean(llon),np.mean(llat),np.mean(llon),np.mean(llat)+res)
-            lonmin = res * int( (min(llon)/res - diagrad/dyy ) )
-            lonmax = res * int( (max(llon)/res + diagrad/dyy ) ) + res
-            latmin = res * int( (min(llat)/res - diagrad/dyy ) )
-            latmax = res * int( (max(llat)/res + diagrad/dyy ) ) + res
+            lonmin = res * int( (min(llon)/res - diagrad/dyy ) ) - deltall
+            lonmax = res * int( (max(llon)/res + diagrad/dyy ) ) + res + deltall
+            latmin = res * int( (min(llat)/res - diagrad/dyy ) ) - deltall
+            latmax = res * int( (max(llat)/res + diagrad/dyy ) ) + res + deltall
         else:
             domtraj=ltraj[0].algodef["domtraj"]
             lonmin=domtraj["lonmin"]
