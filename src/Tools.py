@@ -1263,6 +1263,10 @@ class diagdef:
             self.nicename="IR Brightness Temperature"
             self.unit = "K"
             self.plot_unit = self.unit
+        elif self.par=="ff10m":
+            self.nicename="10m wind speed"
+            self.unit = "m/s"
+            self.plot_unit = self.unit
         else:
             print("you may declare nicename and unit in Tools.diagdef()")
 
