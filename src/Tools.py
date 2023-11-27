@@ -692,19 +692,20 @@ def get_res(fld):
     return abs(ll[1]-ll[0])
 
 #--------------------------------------------------------------------------#
-def find_allmin(fld,dist=maxval,thr=maxval):
+def find_allmin(fld,ms,dist=maxval,thr=maxval):
     #Finds the local minima in field fld, that are below thr
     #if several minima are inside a dist radius (km),
     #we keep the one with highest absolute value
+    #ms=1 for min, -1 for max
 
-    indexf = local_minima(fld.data)
+    indexf = local_minima(ms*fld.data)
     tlat=[]
     tlon=[]
     tval=[]
 
     for ivj in range(np.shape(indexf)[1]):
         lon,lat = fld.geometry.ij2ll(indexf[1][ivj],indexf[0][ivj])
-        val = fld.getvalue_ll(lon,lat)
+        val = ms*fld.getvalue_ll(lon,lat)
 
         if val<thr:
 
@@ -754,11 +755,9 @@ def find_allmax(fld,dist,thr):
         #if several minima are inside a dist radius (km),
         #we keep the one with highest absolute value
 
-    fld.data=-fld.data
     if thr==maxval:
         thr=-maxval
-    tlon,tlat,tval = find_allmin(fld,dist=dist,thr=-thr)
-    fld.data=-fld.data
+    tlon,tlat,tval = find_allmin(fld,-1,dist=dist,thr=-thr)
 
     tval1 = [-tval[i] for i in range(len(tval))]
 
@@ -771,7 +770,7 @@ def find_allextr(sign, fld, dist=maxval, thr=maxval):
     #if sign=-1, finds the min (in that case the value must be below thr)
     
     if sign==-1:
-        tlon, tlat, tval = find_allmin(fld,dist,thr)
+        tlon, tlat, tval = find_allmin(fld,1,dist,thr)
     elif sign==1:
         tlon, tlat, tval = find_allmax(fld,dist,thr)
     else:
@@ -814,10 +813,11 @@ def list_abovebelow(sign,fld,lon0,lat0,thr,ss):
 
     return lon, lat, val
 #--------------------------------------------------------------------------#
-def find_amin(fld, lon0 ,lat0 ,ss=0 , thr=maxval ):
+def find_amin(fld, ms, lon0 ,lat0 ,ss=0 , thr=maxval ):
     #Finds the minimum absolute value and position in field fld to the point (lon0,lat0)
     #In a square of size ss degrees (if ss not specified or 0, the whole
     #domain is searched for) and which value is below thr
+    #ms = 1 for min, 1 for max
     #Output : gook : boolean to verify a minimum has been found
     #Output : lat and lon are gridpoints of fld 
     #(we do not recommend to apply smooth_min afterwards because the result is not a local minimum)
@@ -854,7 +854,7 @@ def find_amin(fld, lon0 ,lat0 ,ss=0 , thr=maxval ):
         imax=min(pts[2][0]+maxsizeX,X-1)
         jmin=max(1,pts[0][1]-maxsizeY)
         jmax=min(pts[3][1]+maxsizeY,Y-1)
-        tab=fld.data[jmin:jmax,imin:imax]
+        tab=ms*fld.data[jmin:jmax,imin:imax]
 
         valmin = np.amin(tab,axis=None)
         indexf = np.unravel_index(np.argmin(tab,axis=None), tab.shape)
@@ -862,7 +862,7 @@ def find_amin(fld, lon0 ,lat0 ,ss=0 , thr=maxval ):
         if np.size(indexf) > 0: #Finds the local minimum with lower value
             lon,lat = fld.geometry.ij2ll(indexf[1]+imin,indexf[0]+jmin)
             dist=comp_length(lon0,lat0,lon,lat)
-            val = fld.getvalue_ll(lon,lat)
+            val = ms*fld.getvalue_ll(lon,lat)
             if (val<thr):
                 gook=True
                 dmin=dist
@@ -873,11 +873,12 @@ def find_amin(fld, lon0 ,lat0 ,ss=0 , thr=maxval ):
     return lon1, lat1, valmin, dmin, gook
 
 
-def find_locmin(fld, lon0 ,lat0 ,ss=0 , thr=maxval ):
+def find_locmin(fld, ms, lon0 ,lat0 ,ss=0 , thr=maxval ):
     #Finds the closest local minimum in field fld to the point (lon0,lat0)
     #In a square of size ss degrees (if ss not specified or 0, the whole
     #domain is searched for)
     #and which value is below thr
+    #ms=1 for min, -1 for max
     #Output : gook : boolean to verify a minimum has been found
     #Output : lat and lon are gridpoints of fld (to interpolate, use smooth_min() afterwards
 
@@ -915,7 +916,7 @@ def find_locmin(fld, lon0 ,lat0 ,ss=0 , thr=maxval ):
         jmax=min(pts[3][1]+ivi,Y-1)
         #print("imin,imax,jmin,jmax",imin,imax,jmin,jmax)
         #print("llmin,llmax",fld.geometry.ij2ll(imin,jmin),fld.geometry.ij2ll(imax,jmax))
-        tab=fld.data[jmin:jmax,imin:imax]
+        tab=ms*fld.data[jmin:jmax,imin:imax]
         indexf = local_minima(tab)
         
         if np.size(indexf) > 0: #Finds the closest local minimum
@@ -924,7 +925,7 @@ def find_locmin(fld, lon0 ,lat0 ,ss=0 , thr=maxval ):
             for ivj in range(nfound):
                 lon,lat = fld.geometry.ij2ll(indexf[1][ivj]+imin,indexf[0][ivj]+jmin)
                 dist=comp_length(lon0,lat0,lon,lat)
-                val = fld.getvalue_ll(lon,lat)
+                val = ms*fld.getvalue_ll(lon,lat)
                 #print("LONLAT2",lon,lat,val,tab[indexf[0],indexf[1]])
                 if (val<thr) and (dist<dmin):
                     dmin=dist
@@ -962,41 +963,18 @@ def find_locmin(fld, lon0 ,lat0 ,ss=0 , thr=maxval ):
     return lon1, lat1, valmin, dmin, gook
 
 #--------------------------------------------------------------------------#
-def find_locmax(fld, lon0, lat0, ss, thr):
-    #Finds the closest local max in field fld to the point (lon0,lat0)
-    #which value is above thr
-    
-    fld.data=-fld.data
-    if thr==maxval:
-        thr=-maxval
-    lon1, lat1, val, dmin, gook = find_locmin(fld,lon0,lat0,ss=ss,thr=-thr)
-    fld.data=-fld.data
-
-    return lon1, lat1, -val, dmin, gook
-
-#--------------------------------------------------------------------------#
-def find_amax(fld, lon0, lat0, ss, thr):
-    #Finds a local max in field fld close to the point (lon0,lat0)
-    #which value is above thr and with the maximum value
-    
-    fld.data=-fld.data
-    if thr==maxval:
-        thr=-maxval
-    lon1, lat1, val, dmin, gook = find_amin(fld,lon0,lat0,ss=ss,thr=-thr)
-    fld.data=-fld.data
-
-    return lon1, lat1, -val, dmin, gook
-
-#--------------------------------------------------------------------------#
 def find_locextr(sign, fld, lon0, lat0, ss=0, thr=maxval):
     #Finds the closest local max if sign=1, min if sign=-1, respectively
     #if sign=1, finds the max (in that case the value must be above thr)
     #if sign=-1, finds the min (in that case the value must be below thr)
     
-    if sign==-1:
-        lon1, lat1, valmin, dmin, gook = find_locmin(fld,lon0,lat0,ss,thr)
-    elif sign==1:
-        lon1, lat1, valmin, dmin, gook = find_locmax(fld,lon0,lat0,ss,thr)
+    if sign==-1: #min
+        lon1, lat1, valmin, dmin, gook = find_locmin(fld,1,lon0,lat0,ss,thr)
+    elif sign==1: #max
+        if thr==maxval:
+            thr=-maxval
+        lon1, lat1, valmin, dmin, gook = find_locmin(fld,-1,lon0,lat0,ss,-thr)
+        valmin = -valmin
     else:
         print('Error in Tools.find_locextr: wrong sign (should be -1 or 1)')
 
@@ -1009,27 +987,31 @@ def find_aextr(sign, fld, lon0, lat0, ss=0, thr=maxval):
     #if sign=-1, finds the min (in that case the value must be below thr) with the lowest value
     
     if sign==-1:
-        lon1, lat1, valmin, dmin, gook = find_amin(fld,lon0,lat0,ss,thr)
+        lon1, lat1, valmin, dmin, gook = find_amin(fld,1,lon0,lat0,ss,thr)
     elif sign==1:
-        lon1, lat1, valmin, dmin, gook = find_amax(fld,lon0,lat0,ss,thr)
+        if thr==maxval:
+            thr=-maxval
+        lon1, lat1, valmin, dmin, gook = find_amin(fld,-1,lon0,lat0,ss,-thr)
+        valmin = -valmin
     else:
         print('Error in Tools.find_extr: wrong sign (should be -1 or 1)')
 
     return lon1, lat1, valmin, dmin, gook
 
 #--------------------------------------------------------------------------#
-def smooth_min(fld,glon,glat):
+def smooth_min(fld,ms,glon,glat):
     #Finds the subgrid minima in fld,
     #given glon, glat is a grid minima 
     #Using Tech Memo ECMWF 386 formula
+    #ms=1 for min, -1 for max
 
     res=get_res(fld)
 
-    pm = fld.getvalue_ll(glon,glat)
-    pmA = fld.getvalue_ll(glon-res,glat)
-    pmB = fld.getvalue_ll(glon,glat+res)
-    pmC = fld.getvalue_ll(glon,glat-res)
-    pmD = fld.getvalue_ll(glon+res,glat)
+    pm = ms*fld.getvalue_ll(glon,glat)
+    pmA = ms*fld.getvalue_ll(glon-res,glat)
+    pmB = ms*fld.getvalue_ll(glon,glat+res)
+    pmC = ms*fld.getvalue_ll(glon,glat-res)
+    pmD = ms*fld.getvalue_ll(glon+res,glat)
 
     d1 = pmD-pmA
     d2 = pmB-pmC
@@ -1049,23 +1031,14 @@ def smooth_min(fld,glon,glat):
     return lon, lat, val
 
 #--------------------------------------------------------------------------#
-def smooth_max(fld, glon, glat):
-    #Finds the subgrid maxima in fld,
-    
-    fld.data=-fld.data
-    lon, lat, val = smooth_min(fld, glon, glat)
-    fld.data=-fld.data
-
-    return lon, lat, -val
-
-#--------------------------------------------------------------------------#
 def smooth_extr(sign, fld, glon, glat):
     #Finds the subgrib maxima if sign=1, min if sign=-1, respectively
     
     if sign==-1:
-        lon, lat, val = smooth_min(fld,glon,glat)
+        lon, lat, val = smooth_min(fld,1,glon,glat)
     elif sign==1:
-        lon, lat, val = smooth_max(fld,glon,glat)
+        lon, lat, val = smooth_min(fld,-1,glon,glat)
+        val = -val
     else:
         print('Error in Tools.find_locextr: wrong sign (should be -1 or 1)')
 
@@ -1437,7 +1410,7 @@ def max_diag(par, traj, indf, dom, res, mintime, maxtime, basetime,subnproc=1):
         lon0 = 0.5*(dom["lonmax"]+dom["lonmin"])
         lat0 = 0.5*(dom["latmax"]+dom["latmin"])
         #print(lon0,lat0)
-        lon1, lat1, val1, dmin1, gook = find_amax(flda, lon0, lat0)
+        lon1, lat1, val1, dmin1, gook = find_aextr(1,flda, lon0, lat0) #max
         if val1 > val:
             val = val1
             lon = lon1
