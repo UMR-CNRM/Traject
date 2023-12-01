@@ -498,25 +498,31 @@ def write_header(traj,algo,indf):
         #indf is a string: we read the file
         indf2=Inputs.inputdef()
         indf2.read_input(indf)
-    else:
-        #indf is already a dictionary
+    elif isinstance(indf,dict):
+        #indf is a dictionary
         if indf=={} and "inputdef" in traj.__dict__:
             indf2=Inputs.inputdef()
             indf2.update_input(traj.inputdef.__dict__)
         else:
-            indf2=indf
+            indf2=Inputs.inputdef()
+            indf2.update_input(indf)
+    else: #indf is an object
+        indf2 = indf
 
     if isinstance(algo,str):
         #algo is a string: we read the file
         algo2=Inputs.algodef()
         algo2.read_input(algo)
-    else:
-        #algo is already a dictionary
+    elif isinstance(algo,dict):
+        #algo is a dictionary
         if algo=={} and "algodef" in traj.__dict__:
             algo2=Inputs.algodef()
             algo2.update_input(traj.algodef)
         else:
-            algo2=algo
+            algo2=Inputs.algodef()
+            algo2.update_input(algo)
+    else: #algo is an object
+        algo2 = algo
 
     if not indf2=={}:
         if indf2.origin=="obs":

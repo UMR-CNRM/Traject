@@ -51,7 +51,11 @@ def track(algo,indf,linst,lfile,**kwargs):
     else:
         uvmean_box = 0
 
-    mintlen=algo.varalgo["mintlen"] #Minimum length required (in hours) to keep the track at the end
+    if "mintlen" in algo.varalgo:
+        mintlen=algo.varalgo["mintlen"] #Minimum length required (in hours) to keep the track at the end
+    else:
+        mintlen = 0
+
     accbool = algo.varalgo["accbool"] #if the acceleration criterion is applied or not
     if accbool:
         accfct = algo.varalgo["accfct"] #factor applied to the acceleration criterion (the higher accfct, the higher tolerance; accfct=infty is equivalent to accbool=False)
