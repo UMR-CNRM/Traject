@@ -520,22 +520,34 @@ def set_dom_limits(ltraj,opt,diag="",diagrad=0.0,dom=[]):
     #print(ltraj[0].__dict__)
     if ltraj[0].inputdef["origin"]=="obs":
         leng = ltraj[0].inputdef["domain"]["lonmax"] - ltraj[0].inputdef["domain"]["lonmin"]
-        if leng>100.0:
-            res = 1.0
-        elif leng>10.0:
-            res = 0.25
-        else:
-            res = 0.1
+    else:
+        leng = ltraj[0].algodef["domtraj"]["lonmax"] - ltraj[0].algodef["domtraj"]["lonmin"]
+
+    if leng>100.0:
+        res0 = 1.0
+    elif leng>10.0:
+        res0 = 0.25
+    else:
+        res0 = 0.1
+
+    if ltraj[0].inputdef["origin"]=="obs":
+        res = res0
     elif diag=="":
         par = ltraj[0].algodef["specfields"]["track"]
         if par in ltraj[0].algodef["parres"].keys():
-            res = ltraj[0].algodef["parres"][par]
+            if ltraj[0].algodef["parres"][par]==0:
+                res = res0
+            else:
+                res = ltraj[0].algodef["parres"][par]
         else:
             res = ltraj[0].algodef["parres"]["all"]
     else:
         dd = Tools.guess_diag(diag,True)
         if dd.par in ltraj[0].algodef["parres"].keys():
-            res = ltraj[0].algodef["parres"][dd.par]
+            if ltraj[0].algodef["parres"][dd.par]==0:
+                res = res0
+            else:
+                res = ltraj[0].algodef["parres"][dd.par]
         else:
             res = ltraj[0].algodef["parres"]["all"]
 
