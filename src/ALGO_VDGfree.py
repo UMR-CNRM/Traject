@@ -47,6 +47,11 @@ def track(algo,indf,linst,lfile,**kwargs):
     else:
         uvmean_box=0
 
+    if "mintlen" in algo.varalgo:
+        mintlen=algo.varalgo["mintlen"] #Minimum length required (in hours) to keep the track at the end
+    else:
+        mintlen = 0
+
     filtapply=Tools.check_filtapply(algo,indf,linst,lfile,res)
              # 1 if filtering must be applied in the routine ; 0 if the input data has already been filtered
     steering_levels = algo.varalgo["steering_levels"]
@@ -179,6 +184,7 @@ def track(algo,indf,linst,lfile,**kwargs):
         maxv=0.0
 
         if traj.nobj>0:
+            blen=False
             bmax=False
             maxv=0.0
             for obj in traj.traj:
@@ -187,10 +193,14 @@ def track(algo,indf,linst,lfile,**kwargs):
                 if (stt and obj.traps[trackpar]>=thr_track) or ((not stt) and obj.traps[trackpar]<=thr_track):
                     maxv=obj.traps[trackpar]
                     bmax=True
-        if bmax:
+
+        if traj.tlen(unit="h")>=mintlen: #Condition on trajectory length
+            blen=True
+
+        if bmax and blen:
             ltraj.append(traj)
         else:
-            print("This trajectory does not reach the tracking threshold - We skip it")
+            print("This trajectory does not reach the tracking threshold or the length - We skip it")
 
     return ltraj
 
