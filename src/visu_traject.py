@@ -185,7 +185,7 @@ def plot_single_track(tra,col=''): #Plot track
 # Plots for probabilistics diagnostics
 #---------------------------------------------------------
 
-def map_plot(ltraj, diag, typeplot="line", leg=[], opt = "std", fig={}, filename="", colormap="viridis", colorlevels=[], diagthr=0.0, diagrad=0.0, centre="obj",dom=[], **kwargs):
+def map_plot(ltraj, diag, typeplot="line", leg=[], opt = ["std"], fig={}, filename="", colormap="viridis", colorlevels=[], diagthr=0.0, diagrad=0.0, centre="obj",dom=[], **kwargs):
     #ltraj, #list of tracks to take into account in the time plot
     #diag, #diagnostic name to plot (default is nam=””: the tracked object is plotted)
     #typeplot:, #can be “line” (default),  “dot” or “strike”
@@ -277,7 +277,7 @@ def plot_map_line(ltraj, nam, cax, leg, opt, cmap, **kwargs):
 
 def plot_map_dot(ltraj, nam, fig, cax, leg, opt, cmap, lev, **kwargs):  
     #Plot individual members in ltraj as dots on cax
-    #if opt=="max", only the maximum value along the forecast is computed
+    #if "max" in opt, only the maximum value along the forecast is computed
     #(called by map_plot)
     
     #read list of colors
@@ -302,7 +302,7 @@ def plot_map_dot(ltraj, nam, fig, cax, leg, opt, cmap, lev, **kwargs):
         lonc=[]
         latc=[]
         pdiag=[]
-        if opt=="max":
+        if "max" in opt:
             pdiag.append(-999.0)
             lonc.append(-999.0)
             latc.append(-999.0)
@@ -318,7 +318,7 @@ def plot_map_dot(ltraj, nam, fig, cax, leg, opt, cmap, lev, **kwargs):
                     lon0=tra.traj[ivj].__dict__[nam][0]
                     lat0=tra.traj[ivj].__dict__[nam][1]
                     val=tra.traj[ivj].__dict__[nam][2]
-            if opt=="max":
+            if "max" in opt:
                 if val > pdiag[0]:
                     pdiag[0] = val
                     lonc[0] = lon0
@@ -371,15 +371,20 @@ def plot_map_strike(ltraj, diag, fig, diagrad, diagthr, centre, cax, leg, opt, c
     lonmin,lonmax,latmin,latmax,res = set_dom_limits(ltraj,opt,diag=diag,diagrad=diagrad,dom=dom)
     images, N_obj, lons, lats = init_strike(ltraj,[lonmin,lonmax,latmin,latmax],res)
     ivi=0
+    ntraj=0
     for traj in ltraj:
         for obj in traj.traj:
             images[ivi] = obj.mask(lons,lats,diag,diagthr,diagrad,centre)
             ivi = ivi +1
             #print(ivi)
+        ntraj=ntraj+1
     images[images > 0] = 1
     
     summed_img = np.sum(images, axis=0)
-    imax = np.max(summed_img) #Normalisation 1
+    imax = np.max(summed_img) #Normalisation 1 (defaut)
+    if "normtrack" in opt:
+        imax = ntraj #Normalisation ntraj #Normalisation traj
+        summed_img = np.clip(summed_img,0,ntraj)
 
     if colorlevels==[]:
         maxc=1.0
@@ -551,7 +556,7 @@ def set_dom_limits(ltraj,opt,diag="",diagrad=0.0,dom=[]):
         else:
             res = ltraj[0].algodef["parres"]["all"]
 
-    if opt=="std":
+    if "std" in opt:
         if ltraj[0].inputdef["origin"]=="obs":
             domtraj=ltraj[0].inputdef["domain"]
         else:
@@ -560,11 +565,12 @@ def set_dom_limits(ltraj,opt,diag="",diagrad=0.0,dom=[]):
         lonmax=domtraj["lonmax"]
         latmin=domtraj["latmin"]
         latmax=domtraj["latmax"]
-    elif opt[0:4]=="zoom":
+    elif "zoom" in [z[0:4] for z in opt]:
+        st=[z for z in opt if z[0:4]=="zoom"][0]
+        print("zoom",st)
         deltall=0
-        if "+" in opt:
-            deltall=float(opt.split('+')[1])
-        print("zoom")
+        if "+" in st:
+            deltall=float(st.split('+')[1])
         llon=[]
         llat=[]
         if diag=="":
@@ -600,7 +606,7 @@ def set_dom_limits(ltraj,opt,diag="",diagrad=0.0,dom=[]):
             lonmax=domtraj["lonmax"]
             latmin=domtraj["latmin"]
             latmax=domtraj["latmax"]
-    elif opt=="user" and len(dom)>0:
+    elif "user" in opt and len(dom)>0:
         lonmin=dom[0]
         lonmax=dom[1]
         latmin=dom[2]
@@ -611,7 +617,7 @@ def set_dom_limits(ltraj,opt,diag="",diagrad=0.0,dom=[]):
 
     return lonmin,lonmax,latmin,latmax, res
 
-def time_plot(ltraj, diag, typeplot="line", leg=[], opt = "", fig={}, ax=0, filename="", colormap="viridis", colorlevels=[], **kwargs):
+def time_plot(ltraj, diag, typeplot="line", leg=[], opt = [], fig={}, ax=0, filename="", colormap="viridis", colorlevels=[], **kwargs):
     #ltraj, #list of tracks to take into account in the time plot
     #diag, #diagnostic name to plot
     #typeplot:, #can be “line” (default), “whisker”, “bar” or “dot”
@@ -722,7 +728,7 @@ def plot_time_line(ltraj, nam, cax, leg, opt, cmap, **kwargs):
     
 def plot_time_dot(ltraj, nam, fig, cax, leg, opt, cmap, lev, **kwargs):  
     #Plot individual members in ltraj as dots on cax
-    #if opt=="max", only the maximum value along the forecast is computed
+    #if "max" in opt, only the maximum value along the forecast is computed
     #(called by time_plot)
     
     #read list of colors
@@ -746,7 +752,7 @@ def plot_time_dot(ltraj, nam, fig, cax, leg, opt, cmap, lev, **kwargs):
     for ivi in range(len(ltraj)):
         time=[]
         pdiag=[]
-        if opt=="max":
+        if "max" in opt:
             pdiag.append(-999.0)
             time.append("")
         tra=ltraj[ivi]
@@ -756,7 +762,7 @@ def plot_time_dot(ltraj, nam, fig, cax, leg, opt, cmap, lev, **kwargs):
             if nam in tra.traj[ivj].__dict__['diags']:
                 val = tra.traj[ivj].__dict__[nam][2]
                 tim = tra.traj[ivj].__dict__['time']
-                if opt=="max":
+                if "max" in opt:
                     if val >= pdiag[0]:
                         pdiag[0] = val
                         time[0] = tim
