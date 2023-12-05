@@ -822,7 +822,7 @@ def plot_time_whiskers(ltraj, nam, cax, leg, opt, cmap, **kwargs):
     for tim in timestamp:
         tims=datetime.strftime(tim,time_fmt)
         #print(tims,tim)
-        data.append([])
+        #data.append([])
         #print(data)
         nobj=0
         for ivi in range(len(ltraj)):
@@ -867,7 +867,7 @@ def plot_time_bar(ltraj, nam, fig, cax, leg, opt, cmap, lev, **kwargs):
     for tim in timestamp:
         tims=datetime.strftime(tim,time_fmt)
         #print(tims,tim)
-        data.append([])
+        #data.append([])
         #print(data)
         nobj=0
         for ivi in range(len(ltraj)):
