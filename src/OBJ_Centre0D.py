@@ -373,7 +373,7 @@ class ObjectM:
                         else:
                             distmax=Tools.comp_length(self.lonc,self.latc,self.lonc-2.0,self.latc) #Distance (en km) de 2deg de longtitude
                         dt = -0.5 #derivative criterion on temperature
-                        dz = -500 #derivative criterion on thickness (500 mgp)
+                        dz = -50 #derivative criterion on thickness (500 mgp)
 
                         #Extraction of fields
                         t200 = dict_fld["t200"]
@@ -391,7 +391,7 @@ class ObjectM:
                         lon,lat,val,dist,gook = Tools.find_locextr(1,tmean,self.lonc,self.latc,ss=4,thr=0.0)
                         if gook and (dist<distmax):
                             #Derivative criterion
-                            deriv = Tools.comp_deriv(tmean,self.lonc,self.latc,8,domtraj)
+                            deriv = Tools.comp_deriv(tmean,lon,lat,8,domtraj)
                             if deriv[0]<dt and deriv[1]<dt and deriv[2]<dt and deriv[3]<dt:
                                 isok=True
                             else:
@@ -407,7 +407,7 @@ class ObjectM:
                             lon,lat,val,dist,gook = Tools.find_locextr(1,z200,self.lonc,self.latc,ss=4,thr=0.0)
                             if gook and (dist<distmax):
                                 #Derivative criterion
-                                deriv = Tools.comp_deriv(z200,self.lonc,self.latc,8,domtraj)
+                                deriv = Tools.comp_deriv(z200,lon,lat,8,domtraj)
                                 if deriv[0]<dz and deriv[1]<dz and deriv[2]<dz and deriv[3]<dz:
                                     isok=True
                                 else:

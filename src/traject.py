@@ -502,7 +502,7 @@ def write_header(traj,algo,indf):
         #indf is a dictionary
         if indf=={} and "inputdef" in traj.__dict__:
             indf2=Inputs.inputdef()
-            indf2.update_input(traj.inputdef.__dict__)
+            indf2.update_input(traj.inputdef)
         else:
             indf2=Inputs.inputdef()
             indf2.update_input(indf)

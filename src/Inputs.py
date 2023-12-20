@@ -173,7 +173,7 @@ class inputdef():
             elif str(param) == 'u850':
                 dict = {'parameterCategory': 2, 'parameterNumber': 2,
                         'typeOfFirstFixedSurface':100, 'level': 850}
-            elif str(param) == 'v500': #2nd Horizontal component of wind at 550hPa
+            elif str(param) == 'v500':
                 dict = {'parameterCategory': 2, 'parameterNumber': 3,
                         'typeOfFirstFixedSurface':100, 'level': 500}
             elif str(param) == 'v700':
