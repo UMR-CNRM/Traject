@@ -1240,6 +1240,14 @@ class diagdef:
             self.nicename="10m wind speed"
             self.unit = "m/s"
             self.plot_unit = self.unit
+        elif self.par=="fgust1h":
+            self.nicename="1h wind gust"
+            self.unit = "m/s"
+            self.plot_unit = self.unit
+        elif self.par=="fgust3h":
+            self.nicename="3h wind gust"
+            self.unit = "m/s"
+            self.plot_unit = self.unit
         else:
             print("you may declare nicename and unit in Tools.diagdef()")
 
@@ -1435,6 +1443,10 @@ def load_fld(lparam,fic,inst,indf,algo,domtraj,res,basetime,subnproc,**kwargs):
         else:
             filtrad=0
 
-        dict_fld[par] = Inputs.extract_data(fic,inst,indf,par,domtraj,res[par],basetime,subnproc,filtrad=filtrad)
+        fld = Inputs.extract_data(fic,inst,indf,par,domtraj,res[par],basetime,subnproc,filtrad=filtrad)
+        if "gust" in par and fld is None:
+            fld = Inputs.extract_data(fic,inst,indf,"u10m",domtraj,res[par],basetime,subnproc,filtrad=filtrad)
+            fld.shave(maxval=traject.missval) #missing values
+        dict_fld[par] = fld
 
     return dict_fld
