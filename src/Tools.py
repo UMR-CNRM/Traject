@@ -169,7 +169,7 @@ def get_parsign(par, Hn):
         parname=par
         if parname=="mslp" or parname=="btir":
             parsign=-1
-        elif parname[0:2]=="rr" or parname[0:2]=="ff":
+        elif parname[0:2]=="rr" or parname[0:2]=="ff" or parname[0:5]=='fgust':
             parsign=1
         elif parname[0:2]=="rv" or parname[0:2]=="av":
             if Hn:

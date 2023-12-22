@@ -620,14 +620,17 @@ class Track:
             plt.plot([long_i, long_i1], [lat_i, lat_i1], color = 'red',
                      linestyle = 'solid')
 
-    def tdist(self, tra):
+    def tdist(self, tra, tmax=10000):
         #computes the list of t-distances the objects in each track
+        #for the first tmax instants of each track
         #Output : list of distance of objects that correspond to the same instants
 
         tld=[]
 
-        for obj1 in self.traj:
-            for obj2 in tra.traj:
+        for i1 in range(min(tmax,len(self.traj))):
+            obj1 = self.traj[i1]
+            for i2 in range(min(tmax,len(tra.traj))):
+                obj2 = tra.traj[i2]
                 td=obj1.tdist(obj2)
                 if td<Tools.maxval/2.0:
                     tld.append(td)

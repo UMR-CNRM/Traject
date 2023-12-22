@@ -833,7 +833,7 @@ def Clean_inputfiles(indf,timetraj,**kwargs):
 
     return
 
-def match_tracks(ltraj, dist, mininst, minmb, prefname):
+def match_tracks(ltraj, tmax, dist, mininst, minmb, prefname):
     #Creates groups of tracks in ltraj that match (distance below dist for at least mininst instants)
     #Groups must contain at least minnb tracks
     #Two tracks from the same member and the same basetime cannot belong to the same group
@@ -841,11 +841,16 @@ def match_tracks(ltraj, dist, mininst, minmb, prefname):
         #dist : maximum radius (km) of the circle that contains the tracks of a group
         #mininst : number of instants for which tracks must match
         #minmb : minimum number of tracks in a group
+        #tmax : maximum instants from the beginning the tracks to be taken into account for matching (not applied if zero)
         #prefname : prefix name that will be used to name the tracks
     #Outputs: list of tracks, tracks that match have the same name (prefname-*)
 
     #Initializations
     nn=Tools.maxval
+    if tmax==0:
+        tmax2 = 10000 #extreme max value
+    else:
+        tmax2 = tmax
     numane=0
     lname=[]
     ltrajout = []
@@ -880,8 +885,8 @@ def match_tracks(ltraj, dist, mininst, minmb, prefname):
             ij=-1
             for tj in ltraj2:
                 ij=ij+1
-                if not idcd[ik] == idcd[ij]:
-                    dtkj=tk.tdist(tj)
+                if not idcd[ik] == idcd[ij]: #Different basetime or member
+                    dtkj=tk.tdist(tj,tmax=tmax2)
                     #print(ik, ij, dtkj)
                     dist2=[dtkj[ivi] for ivi in range(len(dtkj)) if dtkj[ivi]<=dist]
                     #print(dist2)
@@ -889,7 +894,7 @@ def match_tracks(ltraj, dist, mininst, minmb, prefname):
                         mtc[ik,ij]=1
                         tn[ik,ij]=len(dist2)
                         tdist[ik,ij]=np.mean(dist2)
-                        #print("match!")
+                        #print("match!" + idcd[ik] + " - " + idcd[ij])
             #TEST TO FILTER OUT DOUBLE VALUES
             for ij in range(ntra):
                 if mtc[ik,ij]==1:
