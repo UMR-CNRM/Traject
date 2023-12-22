@@ -152,6 +152,7 @@ class inputdef():
             #if a vertical level is specified, then the name is
                 #parameter+"level" (if hPa)
                 #parameter+"level"+m (if meter)
+            #print("Parameter to read:",param)
             if str(param) == 'mslp': #Mean sea level pressure
                 dict = {'parameterCategory': 3, 'parameterNumber': 1,
                         'typeOfFirstFixedSurface': 101, 'typeOfLevel': 0}
@@ -173,7 +174,7 @@ class inputdef():
             elif str(param) == 'u850':
                 dict = {'parameterCategory': 2, 'parameterNumber': 2,
                         'typeOfFirstFixedSurface':100, 'level': 850}
-            elif str(param) == 'v500': #2nd Horizontal component of wind at 550hPa
+            elif str(param) == 'v500':
                 dict = {'parameterCategory': 2, 'parameterNumber': 3,
                         'typeOfFirstFixedSurface':100, 'level': 500}
             elif str(param) == 'v700':
@@ -206,6 +207,14 @@ class inputdef():
             elif str(param) == 'v10m':
                 dict = {'parameterCategory':2,'parameterNumber':3,'typeOfFirstFixedSurface': 103,
                         'typeOfSecondFixedSurface':255,'level':10}
+            elif str(param) == 'ugust1h':
+                dict={'scaledValueOfFirstFixedSurface':10,'parameterCategory': 2, 'parameterNumber': 23, 'typeOfFirstFixedSurface':103,'lengthOfTimeRange':1}
+            elif str(param) == 'vgust1h':
+                dict = {'scaledValueOfFirstFixedSurface':10,'parameterCategory': 2, 'parameterNumber': 24, 'typeOfFirstFixedSurface':103,'lengthOfTimeRange':1}
+            elif str(param) == 'ugust3h':
+                dict={'scaledValueOfFirstFixedSurface':10,'parameterCategory': 2, 'parameterNumber': 23, 'typeOfFirstFixedSurface':103,'lengthOfTimeRange':3}
+            elif str(param) == 'vgust3h':
+                dict = {'scaledValueOfFirstFixedSurface':10,'parameterCategory': 2, 'parameterNumber': 24, 'typeOfFirstFixedSurface':103,'lengthOfTimeRange':3}
             elif str(param) == 'btir':
                 dict = {'parameterCategory': 5, 'parameterNumber': 7,
                         'scaleFactorOfCentralWaveNumber': 2,'scaledValueOfCentralWaveNumber': 9259259}
@@ -516,6 +525,12 @@ def split_param(param):
     if param[0:2]=="rv":
         par="rv"
         lev=param[2:5]
+    elif param[0:5]=="ugust":
+        par=param
+        lev=""
+    elif param[0:5]=="vgust":
+        par=param
+        lev=""
     elif param[0:1]=="u":
         par="u"
         lev=param[1:4]
@@ -523,8 +538,8 @@ def split_param(param):
         par="v"
         lev=param[1:4]
     elif param[0:5]=="fgust":
-        par="fgust"
-        lev=param[5:7]
+        par=param
+        lev=""
     elif param[0:2]=="ff":
         par="ff"
         lev=param[2:5]
@@ -674,6 +689,9 @@ def open_field(filename,inst,indf,param):
     if par=="ff" and "ff_uv" in indf.special_keys: #wind module (ff) is computed from u and v
         par0="u"
         param0=param.replace("ff","u")
+    if par[0:5]=="fgust" and "ff_uv" in indf.special_keys: #wind gust (fgust) is computed from ugust and vgust
+        par0=param.replace("fgust","ugust")
+        param0=param.replace("fgust","ugust")
 
     #check of input file and possible substitution of param_file in name
     gook, filename2, epyfmt = check_file(filename,indf,par0,param0)
@@ -705,7 +723,18 @@ def open_field(filename,inst,indf,param):
         else: #Regular grib
             f1 = epygram.formats.resource(filename=filename2,openmode="r",fmt = epyfmt)
             f1.open()
-            fs = f1.readfield(indf.get_ecdico(par0+lev))
+            readok = False
+            try:
+                fs = f1.readfield(indf.get_ecdico(par0+lev))
+            except:
+                readok=False
+            else:
+                readok = True
+
+        #Case of fields which are not included in the grib files
+        if not readok:
+            print(par + " cannot be read in file " + filename2)
+            fs = None
 
     elif gook and epyfmt=="netCDF":
 
@@ -792,51 +821,61 @@ def extract_data(filename,inst,indf,param,domtraj,res,basetime,subnproc,filtrad=
     #Opens the file and gets the fieldset
     fs, par, lev = open_field(filename,inst,indf,param)
 
-    #Gets the original grid
-    (lons, lats) = fs.geometry.get_lonlat_grid()
+    if fs is not None:
 
-    # Extraction of domain characteristics
-    lonmin=np.min(lons)
-    lonmax=np.max(lons)
-    latmin=np.min(lats)
-    latmax=np.max(lats)
-
-    #Test longitudes
-    if lonmax>180.0:
-        fs.global_shift_center(-180)
+        #Gets the original grid
         (lons, lats) = fs.geometry.get_lonlat_grid()
+
+        # Extraction of domain characteristics
         lonmin=np.min(lons)
         lonmax=np.max(lons)
-    res0=lons[0][1]-lons[0][0]
+        latmin=np.min(lats)
+        latmax=np.max(lats)
 
-    #Special case: relative vorticity is computed from absolute vorticity
-    if par=="rv" and "rv_av" in indf.special_keys:
-        fs = comp_rv(fs)
+        #Test longitudes
+        if lonmax>180.0:
+            fs.global_shift_center(-180)
+            (lons, lats) = fs.geometry.get_lonlat_grid()
+            lonmin=np.min(lons)
+            lonmax=np.max(lons)
+        res0=lons[0][1]-lons[0][0]
 
-    #Special case: wind module ff is computed from u and v
-    if par=="ff" and "ff_uv" in indf.special_keys:
-        fs = comp_ff(par,lev,indf,inst,basetime,domtraj,res,filtrad,subnproc)
+        #print("Extract data - ", filename, par, lev)
+        #Special case: relative vorticity is computed from absolute vorticity
+        if par=="rv" and "rv_av" in indf.special_keys:
+            fs = comp_rv(fs)
 
-    #Special case: decumulate rain rate
-    rrdecum, rrbefore = ifdecum(indf)
-    if rrdecum and par[0:2]=="rr" and len(par)>2:
-        fs = comp_rr(par,indf,inst,basetime,domtraj,res,subnproc,filtrad)
+        #Special case: wind module ff is computed from u and v
+        if par=="ff" and "ff_uv" in indf.special_keys:
+            fs = comp_ff(par,lev,indf,inst,basetime,domtraj,res,filtrad,subnproc)
 
-    #If there is no change of resolution nor smoothing --> extract subdomain
-    if filtrad<1e-6 and abs(res0-res)<1e-6:
-        fld=fs.resample_on_regularll({"lonmin":domtraj["lonmin"],"latmin":domtraj["latmin"],
-        "lonmax":domtraj["lonmax"],"latmax":domtraj["latmax"]},res, nprocs=subnproc)
-    else:
-    #There is some change of resolution or smoothing --> resampling
-        if filtrad>1e-6:
-            filtrad2=filtrad
-            ngb = int((res/res0)*(res/res0)*(filtrad/(res*100))*(filtrad/(res*100))*4)
+        #Special case: wind module ff is computed from u and v
+        if par[0:5]=="fgust" and "ff_uv" in indf.special_keys:
+            fs = comp_ff(par,lev,indf,inst,basetime,domtraj,res,filtrad,subnproc)
+
+        #Special case: decumulate rain rate
+        rrdecum, rrbefore = ifdecum(indf)
+        if rrdecum and par[0:2]=="rr" and len(par)>2:
+            fs = comp_rr(par,indf,inst,basetime,domtraj,res,subnproc,filtrad)
+
+        #If there is no change of resolution nor smoothing --> extract subdomain
+        if filtrad<1e-6 and abs(res0-res)<1e-6:
+            fld=fs.resample_on_regularll({"lonmin":domtraj["lonmin"],"latmin":domtraj["latmin"],
+            "lonmax":domtraj["lonmax"],"latmax":domtraj["latmax"]},res, nprocs=subnproc)
         else:
-            filtrad2 = res*100.0 #we apply an equivalent radius to the new grid
-            ngb = int((res/res0)*(res/res0)*(filtrad2/(res*100))*(filtrad2/(res*100))*4)+1
-        fld=fs.resample_on_regularll({"lonmin":domtraj["lonmin"],"latmin":domtraj["latmin"],
-        "lonmax":domtraj["lonmax"],"latmax":domtraj["latmax"]},res,weighting='gauss',
-                radius_of_influence=filtrad2*1e3,neighbours=ngb,sigma=(filtrad2/2.0)*1e3, reduce_data=True, nprocs=subnproc)
+        #There is some change of resolution or smoothing --> resampling
+            if filtrad>1e-6:
+                filtrad2=filtrad
+                ngb = int((res/res0)*(res/res0)*(filtrad/(res*100))*(filtrad/(res*100))*4)
+            else:
+                filtrad2 = res*100.0 #we apply an equivalent radius to the new grid
+                ngb = int((res/res0)*(res/res0)*(filtrad2/(res*100))*(filtrad2/(res*100))*4)+1
+            fld=fs.resample_on_regularll({"lonmin":domtraj["lonmin"],"latmin":domtraj["latmin"],
+            "lonmax":domtraj["lonmax"],"latmax":domtraj["latmax"]},res,weighting='gauss',
+                    radius_of_influence=filtrad2*1e3,neighbours=ngb,sigma=(filtrad2/2.0)*1e3, reduce_data=True, nprocs=subnproc)
+
+    else:
+        fld = None
 
     return fld
 
@@ -853,6 +892,9 @@ def extract_domain(filename,inst,indf,param):
 
     #Open file and get field
     fs, par, lev = open_field(filename,inst,indf,param)
+    if "gust" in par and fs is None:
+        print("We try domain characteristics from ff10m instead of absent gust:")
+        fs, par, lev = open_field(filename,inst,indf,"u10m")
 
     # Extraction des lon, lat et données du domaine global
     (lons, lats) = fs.geometry.get_lonlat_grid()
@@ -970,8 +1012,22 @@ def comp_ff(parname,lev,indf,inst,basetime,domtraj,res,filtrad,subnproc):
     #print("Filter= ", filtrad, " Resolution: ",res)
 
     fname1=indf.get_filename(basetime,term)
-    uf=extract_data(fname1,inst,indf,'u'+lev,domtraj,res,subnproc,filtrad)
-    vf=extract_data(fname1,inst,indf,'v'+lev,domtraj,res,subnproc,filtrad)
+    #print("COMP_FF for", parname)
+    #print("Read file:",fname1)
+    if parname=="ff":
+        uf=extract_data(fname1,inst,indf,'u'+lev,domtraj,res,subnproc,filtrad)
+        vf=extract_data(fname1,inst,indf,'v'+lev,domtraj,res,subnproc,filtrad)
+    elif parname[0:5]=="fgust":
+        uf=extract_data(fname1,inst,indf,parname.replace('fgust','ugust'),domtraj,res,subnproc,filtrad)
+        if uf is None:
+            uf=extract_data(fname1,inst,indf,'u10m',domtraj,res,subnproc,filtrad)
+            uf.shave(maxval=missval)
+            print('Replace '+parname+' from '+fname1+' by missing values')
+        vf=extract_data(fname1,inst,indf,parname.replace('fgust','vgust'),domtraj,res,subnproc,filtrad)
+        if vf is None:
+            vf=extract_data(fname1,inst,indf,'v10m',domtraj,res,subnproc,filtrad)
+            vf.shave(maxval=missval)
+            print('Replace '+parname+' from '+fname1+' by missing values')
 
     wind = epygram.fields.make_vector_field(uf,vf)
     ff = wind.to_module()
