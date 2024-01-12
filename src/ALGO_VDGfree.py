@@ -47,6 +47,11 @@ def track(algo,indf,linst,lfile,**kwargs):
     else:
         uvmean_box=0
 
+    if "ss_pair" in algo.varalgo: #Optional ss value for pairing
+        ss_pair = algo.varalgo["ss_pair"]
+    else:
+        ss_pair = ss
+
     if "mintlen" in algo.varalgo:
         mintlen=algo.varalgo["mintlen"] #Minimum length required (in hours) to keep the track at the end
     else:
@@ -117,7 +122,7 @@ def track(algo,indf,linst,lfile,**kwargs):
 
             for obj in lobj:
                 #Look for potential initial cores
-                outf2.append(execore.submit(init_object,obj,dict_fld,linst[it],pairpar,Hn,algo,domtraj,track_parameter,diag_parameter,ss,thr_pair,True,True,ltraj0,radmax))
+                outf2.append(execore.submit(init_object,obj,dict_fld,linst[it],pairpar,Hn,algo,domtraj,track_parameter,diag_parameter,ss_pair,thr_pair,True,True,ltraj0,radmax))
 
             for out in outf2:
                 obj, obj2, isclose = out.result()
@@ -160,7 +165,7 @@ def track(algo,indf,linst,lfile,**kwargs):
                 obj = obj_guess.search_core(dict_fld,linst[it],trackpar,Hn,track_parameter,[],ss=ss,thr_param=thr_core)
                 obj2 = None
                 if obj is not None: # Pairing
-                    obj2 = obj.search_core(dict_fld,linst[it],pairpar,Hn,track_parameter,diag_parameter,ss=ss,thr_param=thr_pair,pairing=True,smooth=True)
+                    obj2 = obj.search_core(dict_fld,linst[it],pairpar,Hn,track_parameter,diag_parameter,ss=ss_pair,thr_param=thr_pair,pairing=True,smooth=True)
                     if obj2 is not None:
                         isok, exclude = obj2.conditiontype(dict_fld,algo,domtraj,init=False)
 

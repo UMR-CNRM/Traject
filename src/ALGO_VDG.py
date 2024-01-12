@@ -46,6 +46,11 @@ def track(algo,indf,linst,lfile,**kwargs):
     else:
         uvmean_box=0
 
+    if "ss_pair" in algo.varalgo: #Optional ss value for pairing
+        ss_pair = algo.varalgo["ss_pair"]
+    else:
+        ss_pair = ss
+
     filtapply=Tools.check_filtapply(algo,indf,linst,lfile,res)
              # 1 if filtering must be applied in the routine ; 0 if the input data has already been filtered
     steering_levels = algo.varalgo["steering_levels"]
@@ -115,7 +120,7 @@ def track(algo,indf,linst,lfile,**kwargs):
                 obj = refobj[0].search_core(dict_fld,linst[it0],trackpar,Hn,track_parameter,[],ss=ss,thr_param=thr_core)
                 obj2 = None
                 if obj is not None: # Pairing
-                    obj2 = obj.search_core(dict_fld,linst[it0],pairpar,Hn,track_parameter,diag_parameter,ss=ss,thr_param=thr_pair,pairing=True,smooth=True)
+                    obj2 = obj.search_core(dict_fld,linst[it0],pairpar,Hn,track_parameter,diag_parameter,ss=ss_pair,thr_param=thr_pair,pairing=True,smooth=True)
                     if obj2 is not None:
                         isok, exclude = obj2.conditiontype(dict_fld,algo,domtraj,init=True)
             gook = obj is not None and obj2 is not None and not exclude
@@ -165,7 +170,7 @@ def track(algo,indf,linst,lfile,**kwargs):
             obj = obj_guess.search_core(dict_fld,linst[it],trackpar,Hn,track_parameter,[],ss=ss,thr_param=thr_core)
             obj2 = None
             if obj is not None: # Pairing
-                obj2 = obj.search_core(dict_fld,linst[it],pairpar,Hn,track_parameter,diag_parameter,ss=ss,thr_param=thr_pair,pairing=True,smooth=True)
+                obj2 = obj.search_core(dict_fld,linst[it],pairpar,Hn,track_parameter,diag_parameter,ss=ss_pair,thr_param=thr_pair,pairing=True,smooth=True)
                 if obj2 is not None:
                     isok, exclude = obj2.conditiontype(dict_fld,algo,domtraj,init=False)
             gook = obj is not None and obj2 is not None and not exclude

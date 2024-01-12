@@ -879,6 +879,7 @@ def find_locmin(fld, ms, lon0 ,lat0 ,ss=0 , thr=maxval ):
     #domain is searched for)
     #and which value is below thr
     #ms=1 for min, -1 for max
+    #ss is applied with an equivalent length : a cos(lat) factor is applied on the longitude
     #Output : gook : boolean to verify a minimum has been found
     #Output : lat and lon are gridpoints of fld (to interpolate, use smooth_min() afterwards
 
@@ -889,18 +890,21 @@ def find_locmin(fld, ms, lon0 ,lat0 ,ss=0 , thr=maxval ):
     #Dimensions of fld
     X = fld.geometry.dimensions['X']
     Y = fld.geometry.dimensions['Y']
+    xfact = np.cos(np.pi*lat0/180.0)
 
     res=get_res(fld)
 
     if ss==0:
-        maxsize=min(int(X/2),int(Y/2)) 
+        maxsizeX=int(X/2) 
+        maxsizeY=int(Y/2) 
     else:
         #The function local_minima exclude the boundary zones
         ss=ss+2*res
-        maxsize=(ss/res)/2.0
+        maxsizeX=(ss/res)/(2.0*xfact)
+        maxsizeY=(ss/res)/2.0
     
-    if (fld.geometry.point_is_inside_domain_ll(lon0+2*res, lat0+2*res) and
-       fld.geometry.point_is_inside_domain_ll(lon0-2*res, lat0-2*res)): 
+    if (fld.geometry.point_is_inside_domain_ll(lon0+2*res/xfact, lat0+2*res) and
+       fld.geometry.point_is_inside_domain_ll(lon0-2*res/xfact, lat0-2*res)): 
 
         pts=fld.geometry.nearest_points(lon0,lat0,request=dict(n="2*2"))
 
@@ -908,12 +912,14 @@ def find_locmin(fld, ms, lon0 ,lat0 ,ss=0 , thr=maxval ):
         valmin=maxval
         outok = False
 
-        ivi = int(maxsize)
-        #print("ss=",ss,"maxsize=",maxsize,"ivi=",ivi)
+        ivi = int(maxsizeX)
+        ivj = int(maxsizeY)
+        #print("ss=",ss,"maxsizeX=",maxsizeX,"ivi=",ivi)
+        #print("maxsizeY=",maxsizeY,"ivj=",ivj)
         imin=max(1,pts[0][0]-ivi)
         imax=min(pts[2][0]+ivi,X-1)
-        jmin=max(1,pts[0][1]-ivi)
-        jmax=min(pts[3][1]+ivi,Y-1)
+        jmin=max(1,pts[0][1]-ivj)
+        jmax=min(pts[3][1]+ivj,Y-1)
         #print("imin,imax,jmin,jmax",imin,imax,jmin,jmax)
         #print("llmin,llmax",fld.geometry.ij2ll(imin,jmin),fld.geometry.ij2ll(imax,jmax))
         tab=ms*fld.data[jmin:jmax,imin:imax]
