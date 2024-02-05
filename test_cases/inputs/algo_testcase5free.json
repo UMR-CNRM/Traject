@@ -9,6 +9,6 @@
 	"specfields":{"track":"rv850","pairing":"mslp"},
 	"diag_parameter":["mslp_p"],
         "conditiontype":{"casetype":"TCVitart97","nameobj":"TC","when":"all","exclude":"True"},
-	"parallel":{"subnproc":1}
+	"parallel":{"subnproc":4}
 }
 

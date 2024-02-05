@@ -105,22 +105,20 @@ def track(algo,indf,linst,lfile,**kwargs):
     ''' Step 1: extraction of candidate points at every time step (fill in dico_ker) '''
 #=========================================================================#    
 
-    it=0
+    it = 0
+    outf = []
+    execinit = concurrent.futures.ProcessPoolExecutor(max_workers=subnproc)
     while it<len(linst) and Inputs.check_file(lfile[it],indf,trackpar,trackpar):
 
-        #We could introduce here PARALLELISATION (PoolProcess with subnproc) ... then report it in ALGO_AYRAULT
-        inst=linst[it]
-
-        dict_fld[str(it)] = Tools.load_fld(lparam,lfile[it],linst[it],indf,algo,domtraj,res,basetime,subnproc,parfilt=parfilt,filtapply=filtapply) #input fields at the given instant
-
-        #Finding all extremas
-        lobj0 = Search_allcores(algo.classobj,dict_fld=dict_fld[str(it)],inst=inst,trackpar=trackpar,signtrack=signtrack,track_parameter=track_parameter,dist=radmax, thr=thr_core)
-
-        #END PARALLELISATION - Output: lobj
-
-        dico_ker[str(it)] = lobj0
+        #PARALLELISATION (PoolProcess with subnproc) 
+        outf.append(execinit.submit(init_cores,it,lparam,lfile[it],linst[it],indf,algo,domtraj,res,basetime,subnproc,parfilt,filtapply,trackpar,signtrack,track_parameter,radmax,thr_core))
 
         it = it + 1
+
+    for out in outf:
+        lobj0, dict_fld0, it = out.result()
+        dict_fld[str(it)] = dict_fld0
+        dico_ker[str(it)] = lobj0
 
     it=0
     exclude=False
@@ -277,3 +275,9 @@ def init_object(obj,dict_fld,inst,param,Hn,algo,domtraj,track_parameter,diag_par
 
     return obj, obj2, isclose
 
+def init_cores(it,lparam,fic,inst,indf,algo,domtraj,res,basetime,subnproc,parfilt,filtapply,trackpar,signtrack,track_parameter,radmax,thr_core):
+
+    dict_fld0 = Tools.load_fld(lparam,fic,inst,indf,algo,domtraj,res,basetime,subnproc,parfilt=parfilt,filtapply=filtapply) #input fields at the given instant
+    lobj0 = Search_allcores(algo.classobj,dict_fld=dict_fld0,inst=inst,trackpar=trackpar,signtrack=signtrack,track_parameter=track_parameter,dist=radmax, thr=thr_core)
+
+    return lobj0, dict_fld0, it
