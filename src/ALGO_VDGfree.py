@@ -106,19 +106,12 @@ def track(algo,indf,linst,lfile,**kwargs):
 #=========================================================================#    
 
     it = 0
-    outf = []
-    execinit = concurrent.futures.ProcessPoolExecutor(max_workers=subnproc)
     while it<len(linst) and Inputs.check_file(lfile[it],indf,trackpar,trackpar):
 
-        #PARALLELISATION (PoolProcess with subnproc) 
-        outf.append(execinit.submit(init_cores,it,lparam,lfile[it],linst[it],indf,algo,domtraj,res,basetime,subnproc,parfilt,filtapply,trackpar,signtrack,track_parameter,radmax,thr_core))
-
-        it = it + 1
-
-    for out in outf:
-        lobj0, dict_fld0, it = out.result()
+        lobj0, dict_fld0 = init_cores(it,lparam,lfile[it],linst[it],indf,algo,domtraj,res,basetime,subnproc,parfilt,filtapply,trackpar,signtrack,track_parameter,radmax,thr_core)
         dict_fld[str(it)] = dict_fld0
         dico_ker[str(it)] = lobj0
+        it = it + 1
 
     it=0
     exclude=False
@@ -179,7 +172,7 @@ def track(algo,indf,linst,lfile,**kwargs):
                 obj_guess = objm1.advect(inst, (1-w)*objm1.traps["u_steer"]+ w*objm1.traps["u_speed"],
                     (1-w)*objm1.traps["v_steer"]+ w*objm1.traps["v_speed"],pos="o")
 
-                obj = obj_guess.search_kernel(dico_ker[str(it)], ss) #Il ne trouve pas le point ici : pb ?
+                obj = obj_guess.search_kernel(dico_ker[str(it)], ss)
                 obj2 = None
 
                 if obj is not None: # Pairing
@@ -197,9 +190,7 @@ def track(algo,indf,linst,lfile,**kwargs):
                 lobj.append(None)
                 lobj2.append(None)
 
-        #ICI, ATTRIBUTION DES OBJETS AUX TRAJECTOIRES
-        #POUR CHAQUE OBJET :
-        # - ATTRIBUER A LA TRAJECTOIRE LA PLUS LONGUE
+        #ATTRIBUTION OF OBJECTS TO TRACKS (THE LONGEST)
         for iob in range(len(lobj)):
             if lobj[iob] is not None:
                 samobj = [iob] #List of tracks that match the same object
@@ -280,4 +271,4 @@ def init_cores(it,lparam,fic,inst,indf,algo,domtraj,res,basetime,subnproc,parfil
     dict_fld0 = Tools.load_fld(lparam,fic,inst,indf,algo,domtraj,res,basetime,subnproc,parfilt=parfilt,filtapply=filtapply) #input fields at the given instant
     lobj0 = Search_allcores(algo.classobj,dict_fld=dict_fld0,inst=inst,trackpar=trackpar,signtrack=signtrack,track_parameter=track_parameter,dist=radmax, thr=thr_core)
 
-    return lobj0, dict_fld0, it
+    return lobj0, dict_fld0

@@ -117,22 +117,13 @@ def track(algo,indf,linst,lfile,**kwargs):
 #=========================================================================#    
 
     it = 0
-    outf = []
     dict_fld = {}
-    execinit = concurrent.futures.ProcessPoolExecutor(max_workers=subnproc)
     while it<len(linst) and Inputs.check_file(lfile[it],indf,trackpar,trackpar):
 
-        #PARALLELISATION (PoolProcess with subnproc)
-        outf.append(execinit.submit(init_cores,it,lparam,lfile[it],linst[it],indf,algo,domtraj,res,basetime,subnproc,parfilt,filtapply,trackpar,signtrack,track_parameter,radmax,thr_core,uvmean_box,lev1,lev2))
-
-        it = it + 1
-
-        #END PARALLELISATION - Output: lobj
-        
-    for out in outf:
-        lobj0, dict_fld0, it = out.result()
+        lobj0, dict_fld0 = init_cores(it,lparam,lfile[it],linst[it],indf,algo,domtraj,res,basetime,subnproc,parfilt,filtapply,trackpar,signtrack,track_parameter,radmax,thr_core, uvmean_box, lev1, lev2)
         dict_fld[str(it)] = dict_fld0
         dico_ker[str(it)] = lobj0
+        it = it + 1
 
 #=========================================================================#
     ''' Step 2: building of trajectories by pairing successive objects'''
@@ -326,4 +317,4 @@ def init_cores(it,lparam,fic,inst,indf,algo,domtraj,res,basetime,subnproc,parfil
         lobj0[ivi].traps["Zqual"] = 0.0
         lobj0[ivi].traps["Isuiv"] = 0
 
-    return lobj0, dict_fld0, it
+    return lobj0, dict_fld0
