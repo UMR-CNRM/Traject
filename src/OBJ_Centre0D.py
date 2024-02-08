@@ -162,7 +162,7 @@ class ObjectM:
         #If kind="o", we advect traps["olon"],traps["olat"] (raw tracking position)
         #Otherwise we advect lonc, latc (default)
 
-        obj = ObjectM([],[],time=vtime)
+        obj = ObjectM([],self.traps.keys(),time=vtime)
         dt = (datetime.strptime(obj.time,time_fmt) - datetime.strptime(self.time,time_fmt)).seconds #Timedelta (in seconds)
 
         if pos=="o":
@@ -350,6 +350,29 @@ class ObjectM:
             objectm=None
 
         return objectm
+
+    def search_kernel(self,lker,ss):
+        #Search the closest kernel from dico_ker in square ss and,
+        #if successful, creates the associated object
+        #Returns None if no valid detection
+        #Parameters:
+          #self: input object around which to search
+          #lker: list of object kernels
+          #ss: size of square (degrees)
+
+        dmin=Tools.maxval
+        for obj in lker:
+            if abs(obj.lonc-self.lonc)<ss/2.0 and abs(obj.latc-self.latc)<ss/2.0:
+                dist = Tools.comp_length(obj.lonc,obj.latc,self.lonc,self.latc)
+                if dist < dmin:
+                    dmin = dist
+                    objectm = obj
+
+        if dmin == Tools.maxval:
+            objectm = None
+
+        return objectm
+
 
     def conditiontype(self,dict_fld,algo,domtraj,init=False):
         #Determines if the object satisfies a condition type

@@ -183,6 +183,18 @@ class inputdef():
             elif str(param) == 'v850':
                 dict = {'parameterCategory': 2, 'parameterNumber': 3,
                         'typeOfFirstFixedSurface':100, 'level': 850}
+            elif str(param) == 'u925':
+                dict = {'parameterCategory': 2, 'parameterNumber': 2,
+                        'typeOfFirstFixedSurface':100, 'level': 925}
+            elif str(param) == 'v925':
+                dict = {'parameterCategory': 2, 'parameterNumber': 3,
+                        'typeOfFirstFixedSurface':100, 'level': 925}
+            elif str(param) == 'u300':
+                dict = {'parameterCategory': 2, 'parameterNumber': 2,
+                        'typeOfFirstFixedSurface':100, 'level': 300}
+            elif str(param) == 'v300':
+                dict = {'parameterCategory': 2, 'parameterNumber': 3,
+                        'typeOfFirstFixedSurface':100, 'level': 300}
             elif str(param) == 't500':
                 dict = {'parameterCategory': 0, 'parameterNumber': 0,
                         'typeOfFirstFixedSurface':100, 'level': 500}

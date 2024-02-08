@@ -47,6 +47,11 @@ def track(algo,indf,linst,lfile,**kwargs):
     else:
         uvmean_box=0
 
+    if "ss_pair" in algo.varalgo: #Optional ss value for pairing
+        ss_pair = algo.varalgo["ss_pair"]
+    else:
+        ss_pair = ss
+
     if "mintlen" in algo.varalgo:
         mintlen=algo.varalgo["mintlen"] #Minimum length required (in hours) to keep the track at the end
     else:
@@ -93,58 +98,68 @@ def track(algo,indf,linst,lfile,**kwargs):
     else:
         linst2 = linst
 
-##################*
+    dico_ker={} #Dictionary that contains the object candidates at the different instants
+    dict_fld={} #Dictionary of fields
+
+#=========================================================================#
+    ''' Step 1: extraction of candidate points at every time step (fill in dico_ker) '''
+#=========================================================================#    
+
+    it = 0
+    while it<len(linst) and Inputs.check_file(lfile[it],indf,trackpar,trackpar):
+
+        lobj0, dict_fld0 = init_cores(it,lparam,lfile[it],linst[it],indf,algo,domtraj,res,basetime,subnproc,parfilt,filtapply,trackpar,signtrack,track_parameter,radmax,thr_core)
+        dict_fld[str(it)] = dict_fld0
+        dico_ker[str(it)] = lobj0
+        it = it + 1
 
     it=0
     exclude=False
     ltraj0=[]
+
+#=========================================================================#
+    ''' Step 2: Loop on time steps '''
+#=========================================================================#    
+
     while it<len(linst)-1:
         print("Instant - ",linst[it])
-        
-        if it<len(linst2)-1:
-            dict_fld = Tools.load_fld(lparam,lfile[it],linst[it],indf,algo,domtraj,res,basetime,subnproc,parfilt=parfilt,filtapply=filtapply) #input fields at the given instant
-            #Finding all extremas (only for instants in linst2)
-            lobj = Search_allcores(algo.classobj,dict_fld=dict_fld,inst=linst[it],trackpar=trackpar,signtrack=signtrack,track_parameter=track_parameter,dist=radmax, thr=thr_core)
 
-            print("Testing "+str(len(lobj))+" initial objects - Parallelisation on subnproc="+str(subnproc)+" threads")
-            execore = concurrent.futures.ThreadPoolExecutor(max_workers=subnproc)
-            outf2 = []
+        #Read input fields once
+        trackfld=[]
+        pairfld=[]
+        condfld=[]
 
-            #Read input fields once
-            trackfld=[]
-            pairfld=[]
-            condfld=[]
+        #LOOK FOR STARTING TRACKS
+        for obj in dico_ker[str(it)]:
+            #Look for potential initial cores
+            obj, obj2, isclose = init_object(obj,dict_fld[str(it)],linst[it],pairpar,Hn,algo,domtraj,track_parameter,diag_parameter,ss_pair,thr_pair,True,True,ltraj0,radmax)
 
-            for obj in lobj:
-                #Look for potential initial cores
-                outf2.append(execore.submit(init_object,obj,dict_fld,linst[it],pairpar,Hn,algo,domtraj,track_parameter,diag_parameter,ss,thr_pair,True,True,ltraj0,radmax))
+            if not isclose:
+                #Create track
+                print("A starting point has been found at time : ",linst[it])
+                print("Point found:",obj2.lonc,obj2.latc)
+                traj = DefTrack(algo.classobj,basetime=basetime)
 
-            for out in outf2:
-                obj, obj2, isclose = out.result()
-                if not isclose:
-                    #Create track
-                    print("A starting point has been found at time : ",linst[it])
-                    print("Point found:",obj2.lonc,obj2.latc)
-                    traj = DefTrack(algo.classobj,basetime=basetime)
+                #Initialisations of obj2 variables and addition to traj
+                obj2.traps["olon"]=obj.lonc
+                obj2.traps["olat"]=obj.latc
+                u_steer, v_steer = Tools.comp_steering(obj2,steering_levels,uvmean_box,dict_fld[str(it)],pos="o")
 
-                    #Initialisations of obj2 variables and addition to traj
-                    obj2.traps["olon"]=obj.lonc
-                    obj2.traps["olat"]=obj.latc
-                    u_steer, v_steer = Tools.comp_steering(obj2,steering_levels,uvmean_box,dict_fld,pos="o")
+                obj2.traps["u_steer"] = u_steer
+                obj2.traps["v_steer"] = v_steer
+                obj2.traps["u_speed"] = u_steer #we cannot determine a movement at step 0, so we take wind_steer
+                obj2.traps["v_speed"] = v_steer
+                obj2.traps[trackpar] = obj.traps[trackpar]
 
-                    obj2.traps["u_steer"] = u_steer
-                    obj2.traps["v_steer"] = v_steer
-                    obj2.traps["u_speed"] = u_steer #we cannot determine a movement at step 0, so we take wind_steer
-                    obj2.traps["v_speed"] = v_steer
-                    obj2.traps[trackpar] = obj.traps[trackpar]
+                traj.add_obj(obj2)
+                ltraj0.append(traj)
 
-                    traj.add_obj(obj2)
-                    ltraj0.append(traj)
-
-        #Add point at next step for all tracks (for all instants)
+        #Add point at next step for all tracks 
         it = it + 1
-        dict_fld = Tools.load_fld(lparam,lfile[it],linst[it],indf,algo,domtraj,res,basetime,subnproc,parfilt=parfilt,filtapply=filtapply) #input fields at the given instant
-        for traj in ltraj0:
+        lobj = [] #Potential following object for each track
+        lobj2 = [] 
+
+        for traj in ltraj0: 
             print("Looking for a point at instant ", linst[it])
             instm1=linst[it-1]
             inst=linst[it]
@@ -157,25 +172,54 @@ def track(algo,indf,linst,lfile,**kwargs):
                 obj_guess = objm1.advect(inst, (1-w)*objm1.traps["u_steer"]+ w*objm1.traps["u_speed"],
                     (1-w)*objm1.traps["v_steer"]+ w*objm1.traps["v_speed"],pos="o")
 
-                obj = obj_guess.search_core(dict_fld,linst[it],trackpar,Hn,track_parameter,[],ss=ss,thr_param=thr_core)
+                obj = obj_guess.search_kernel(dico_ker[str(it)], ss)
                 obj2 = None
+
                 if obj is not None: # Pairing
-                    obj2 = obj.search_core(dict_fld,linst[it],pairpar,Hn,track_parameter,diag_parameter,ss=ss,thr_param=thr_pair,pairing=True,smooth=True)
+                    obj2 = obj.search_core(dict_fld[str(it)],linst[it],pairpar,Hn,track_parameter,diag_parameter,ss=ss_pair,thr_param=thr_pair,pairing=True,smooth=True)
                     if obj2 is not None:
-                        isok, exclude = obj2.conditiontype(dict_fld,algo,domtraj,init=False)
+                        isok, exclude = obj2.conditiontype(dict_fld[str(it)],algo,domtraj,init=False)
 
                 if obj is not None and obj2 is not None and not exclude:
-                    #Initialisations of obj2 variables and addition to traj
+                    lobj.append(obj)
+                    lobj2.append(obj2)
+                else:
+                    lobj.append(None)
+                    lobj2.append(None)
+            else:
+                lobj.append(None)
+                lobj2.append(None)
+
+        #ATTRIBUTION OF OBJECTS TO TRACKS (THE LONGEST)
+        for iob in range(len(lobj)):
+            if lobj[iob] is not None:
+                samobj = [iob] #List of tracks that match the same object
+                for job in range(len(lobj)):
+                    if lobj[iob] == lobj[job] and not iob==job:
+                        samobj.append(job)
+                maxltraj = -1
+                optobj = -1
+                for job in samobj:
+                    if Tools.comp_difftime(ltraj0[job].traj[-1].time, instm1)==0 and ltraj0[job].nobj > maxltraj:
+                        maxltraj = ltraj0[job].nobj
+                        optobj = job
+                #Add obj to track
+                if optobj > -1:
+                    obj = lobj[optobj]
+                    obj2 = lobj2[optobj]
                     obj2.traps["olon"]=obj.lonc
                     obj2.traps["olat"]=obj.latc
-                    u_steer, v_steer = Tools.comp_steering(obj2,steering_levels,uvmean_box,dict_fld,pos="o")
-                    u_speed, v_speed = obj2.comp_mvt(objm1,pos="o")
+                    u_steer, v_steer = Tools.comp_steering(obj2,steering_levels,uvmean_box,dict_fld[str(it)],pos="o")
+                    u_speed, v_speed = obj2.comp_mvt(ltraj0[optobj].traj[-1],pos="o")
                     obj2.traps["u_steer"] = u_steer
                     obj2.traps["v_steer"] = v_steer
                     obj2.traps["u_speed"] = u_speed
                     obj2.traps["v_speed"] = v_speed
                     obj2.traps[trackpar] = obj.traps[trackpar]
-                    traj.add_obj(obj2)
+                    ltraj0[optobj].add_obj(obj2)
+                    #Delete other objects
+                    for job in samobj:
+                        lobj[job] = None
 
     #Finalisation
     stt=(signtrack==1)
@@ -188,7 +232,6 @@ def track(algo,indf,linst,lfile,**kwargs):
             bmax=False
             maxv=0.0
             for obj in traj.traj:
-                print("Final "+trackpar+":",obj.traps[trackpar])
                 #condition on min/max value
                 if (stt and obj.traps[trackpar]>=thr_track) or ((not stt) and obj.traps[trackpar]<=thr_track):
                     maxv=obj.traps[trackpar]
@@ -223,3 +266,9 @@ def init_object(obj,dict_fld,inst,param,Hn,algo,domtraj,track_parameter,diag_par
 
     return obj, obj2, isclose
 
+def init_cores(it,lparam,fic,inst,indf,algo,domtraj,res,basetime,subnproc,parfilt,filtapply,trackpar,signtrack,track_parameter,radmax,thr_core):
+
+    dict_fld0 = Tools.load_fld(lparam,fic,inst,indf,algo,domtraj,res,basetime,subnproc,parfilt=parfilt,filtapply=filtapply) #input fields at the given instant
+    lobj0 = Search_allcores(algo.classobj,dict_fld=dict_fld0,inst=inst,trackpar=trackpar,signtrack=signtrack,track_parameter=track_parameter,dist=radmax, thr=thr_core)
+
+    return lobj0, dict_fld0

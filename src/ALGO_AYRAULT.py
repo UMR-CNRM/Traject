@@ -116,32 +116,13 @@ def track(algo,indf,linst,lfile,**kwargs):
     ''' Step 1: extraction of candidate points at every time step (fill in dico_ker) '''
 #=========================================================================#    
 
-    it=0
+    it = 0
+    dict_fld = {}
     while it<len(linst) and Inputs.check_file(lfile[it],indf,trackpar,trackpar):
 
-        #We could introduce here PARALLELISATION (PoolProcess)
-        inst=linst[it]
-        print(inst,lfile[it])
-
-        dict_fld = Tools.load_fld(lparam,lfile[it],linst[it],indf,algo,domtraj,res,basetime,subnproc,parfilt=parfilt,filtapply=filtapply) #input fields at the given instant
-
-        #Finding all extremas
-        lobj = Search_allcores(algo.classobj,dict_fld=dict_fld,inst=inst,trackpar=trackpar,signtrack=signtrack,track_parameter=track_parameter,dist=radmax, thr=thr_core)
-
-        #Computation of steering flow parameters
-        u_steer1, v_steer1 = Tools.comp_steering(lobj,[lev1],uvmean_box,dict_fld)
-        u_steer2, v_steer2 = Tools.comp_steering(lobj,[lev2],uvmean_box,dict_fld)
-        for ivi in range(len(lobj)):
-            lobj[ivi].traps["u_steer1"] = u_steer1[ivi]
-            lobj[ivi].traps["v_steer1"] = v_steer1[ivi]
-            lobj[ivi].traps["u_steer2"] = u_steer2[ivi]
-            lobj[ivi].traps["v_steer2"] = v_steer2[ivi]
-            lobj[ivi].traps["Zqual"] = 0.0
-            lobj[ivi].traps["Isuiv"] = 0
-        #END PARALLELISATION - Output: lobj
-        
-        dico_ker[str(it)] = lobj
-
+        lobj0, dict_fld0 = init_cores(it,lparam,lfile[it],linst[it],indf,algo,domtraj,res,basetime,subnproc,parfilt,filtapply,trackpar,signtrack,track_parameter,radmax,thr_core, uvmean_box, lev1, lev2)
+        dict_fld[str(it)] = dict_fld0
+        dico_ker[str(it)] = lobj0
         it = it + 1
 
 #=========================================================================#
@@ -299,7 +280,6 @@ def track(algo,indf,linst,lfile,**kwargs):
         ltraj.append(traj2)
 
     for it in range(len(linst)):
-        dict_fld = Tools.load_fld(lparam,lfile[it],linst[it],indf,algo,domtraj,res,basetime,subnproc,parfilt=parfilt,filtapply=filtapply) #input diag fields at the given instant
         for ir in range(len(ltraj0)):
             #Correction of position if a mslp minimum is found - Computation of diagnostics
             for io in range(ltraj0[ir].nobj):
@@ -307,16 +287,34 @@ def track(algo,indf,linst,lfile,**kwargs):
                 traj2=ltraj[ir]
                 if Tools.comp_difftime(ltraj0[ir].traj[io].time,linst[it])==0:
                     if not pairpar == "":
-                        obj_pair = obj.search_core(dict_fld,linst[it],pairpar,Hn,track_parameter,diag_parameter,ss=ss,thr_param=thr_pairing,pairing=True,smooth=True)
+                        obj_pair = obj.search_core(dict_fld[str(it)],linst[it],pairpar,Hn,track_parameter,diag_parameter,ss=ss,thr_param=thr_pairing,pairing=True,smooth=True)
                         if obj_pair is not None:
                             obj_pair.traps[trackpar] = obj.traps[trackpar]
                             traj2.add_obj(copy.deepcopy(obj_pair))
                         else:
-                            Tools.make_diags(diag_parameter,obj,dict_fld,obj.lonc,obj.latc) #Add diagnostics in traj
+                            Tools.make_diags(diag_parameter,obj,dict_fld[str(it)],obj.lonc,obj.latc) #Add diagnostics in traj
                             traj2.add_obj(copy.deepcopy(obj))
                     else:
-                        Tools.make_diags(diag_parameter,obj,dict_fld,obj.lonc,obj.latc) #Add diagnostics in traj
+                        Tools.make_diags(diag_parameter,obj,dict_fld[str(it)],obj.lonc,obj.latc) #Add diagnostics in traj
                         traj2.add_obj(copy.deepcopy(obj))
 
     return ltraj
 
+def init_cores(it,lparam,fic,inst,indf,algo,domtraj,res,basetime,subnproc,parfilt,filtapply,trackpar,signtrack,track_parameter,radmax,thr_core,uvmean_box,lev1,lev2):
+
+    dict_fld0 = Tools.load_fld(lparam,fic,inst,indf,algo,domtraj,res,basetime,subnproc,parfilt=parfilt,filtapply=filtapply) #input fields at the given instant
+    lobj0 = Search_allcores(algo.classobj,dict_fld=dict_fld0,inst=inst,trackpar=trackpar,signtrack=signtrack,track_parameter=track_parameter,dist=radmax, thr=thr_core)
+
+    #Computation of steering flow parameters
+    u_steer1, v_steer1 = Tools.comp_steering(lobj0,[lev1],uvmean_box,dict_fld0)
+    u_steer2, v_steer2 = Tools.comp_steering(lobj0,[lev2],uvmean_box,dict_fld0)
+
+    for ivi in range(len(lobj0)):
+        lobj0[ivi].traps["u_steer1"] = u_steer1[ivi]
+        lobj0[ivi].traps["v_steer1"] = v_steer1[ivi]
+        lobj0[ivi].traps["u_steer2"] = u_steer2[ivi]
+        lobj0[ivi].traps["v_steer2"] = v_steer2[ivi]
+        lobj0[ivi].traps["Zqual"] = 0.0
+        lobj0[ivi].traps["Isuiv"] = 0
+
+    return lobj0, dict_fld0
