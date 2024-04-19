@@ -859,11 +859,11 @@ def extract_data(filename,inst,indf,param,domtraj,res,basetime,subnproc,filtrad=
 
         #Special case: wind module ff is computed from u and v
         if par=="ff" and "ff_uv" in indf.special_keys:
-            fs = comp_ff(par,lev,indf,inst,basetime,domtraj,res,filtrad,subnproc)
+            fs = comp_ff(par,lev,filename,indf,inst,basetime,domtraj,res,filtrad,subnproc)
 
         #Special case: wind module ff is computed from u and v
         if par[0:5]=="fgust" and "ff_uv" in indf.special_keys:
-            fs = comp_ff(par,lev,indf,inst,basetime,domtraj,res,filtrad,subnproc)
+            fs = comp_ff(par,lev,indf,filename,inst,basetime,domtraj,res,filtrad,subnproc)
 
         #Special case: decumulate rain rate
         rrdecum, rrbefore = ifdecum(indf)
@@ -1015,31 +1015,24 @@ def comp_rr(parname,indf,inst,basetime,domtraj,res,subnproc,filtrad):
 
     return f2
 
-def comp_ff(parname,lev,indf,inst,basetime,domtraj,res,filtrad,subnproc):
+def comp_ff(parname,lev,filename,indf,inst,basetime,domtraj,res,filtrad,subnproc):
     #Computes wind module (ff) from u and v
     #if ff_uv in indf.special_keys
 
-    term = Tools.comp_difftime(basetime,inst)
-    #print("Compute ff ", basetime, '+', term, "Valid time=",inst)
-    #print("Filter= ", filtrad, " Resolution: ",res)
-
-    fname1=indf.get_filename(basetime,term)
-    #print("COMP_FF for", parname)
-    #print("Read file:",fname1)
     if parname=="ff":
-        uf=extract_data(fname1,inst,indf,'u'+lev,domtraj,res,subnproc,filtrad)
-        vf=extract_data(fname1,inst,indf,'v'+lev,domtraj,res,subnproc,filtrad)
+        uf=extract_data(filename,inst,indf,'u'+lev,domtraj,res,subnproc,filtrad)
+        vf=extract_data(filename,inst,indf,'v'+lev,domtraj,res,subnproc,filtrad)
     elif parname[0:5]=="fgust":
-        uf=extract_data(fname1,inst,indf,parname.replace('fgust','ugust'),domtraj,res,subnproc,filtrad)
+        uf=extract_data(filename,inst,indf,parname.replace('fgust','ugust'),domtraj,res,subnproc,filtrad)
         if uf is None:
-            uf=extract_data(fname1,inst,indf,'u10m',domtraj,res,subnproc,filtrad)
+            uf=extract_data(filename,inst,indf,'u10m',domtraj,res,subnproc,filtrad)
             uf.shave(maxval=missval)
-            print('Replace '+parname+' from '+fname1+' by missing values')
-        vf=extract_data(fname1,inst,indf,parname.replace('fgust','vgust'),domtraj,res,subnproc,filtrad)
+            print('Replace '+parname+' from '+filename+' by missing values')
+        vf=extract_data(filename,inst,indf,parname.replace('fgust','vgust'),domtraj,res,subnproc,filtrad)
         if vf is None:
-            vf=extract_data(fname1,inst,indf,'v10m',domtraj,res,subnproc,filtrad)
+            vf=extract_data(filename,inst,indf,'v10m',domtraj,res,subnproc,filtrad)
             vf.shave(maxval=missval)
-            print('Replace '+parname+' from '+fname1+' by missing values')
+            print('Replace '+parname+' from '+filename+' by missing values')
 
     wind = epygram.fields.make_vector_field(uf,vf)
     ff = wind.to_module()
