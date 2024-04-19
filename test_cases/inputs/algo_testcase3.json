@@ -10,4 +10,3 @@
 	"diag_parameter":["mslp_o","mslp_p"],
 	"parallel":{"subnproc":4}
 }
-
