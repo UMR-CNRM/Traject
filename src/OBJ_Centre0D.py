@@ -396,7 +396,7 @@ class ObjectM:
                         else:
                             distmax=Tools.comp_length(self.lonc,self.latc,self.lonc-2.0,self.latc) #Distance (en km) de 2deg de longtitude
                         dt = -0.5 #derivative criterion on temperature
-                        dz = -20*9.81 #derivative criterion on thickness (500 mgp)
+                        dz = -20*9.81 #derivative criterion on thickness (according to Vitart : 50 mgp ~ 50*g m2.s-2 ; but here 20*g m2.s-2 )
 
                         #Extraction of fields
                         t200 = dict_fld["t200"]
