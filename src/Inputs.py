@@ -863,7 +863,7 @@ def extract_data(filename,inst,indf,param,domtraj,res,basetime,subnproc,filtrad=
 
         #Special case: wind module ff is computed from u and v
         if par[0:5]=="fgust" and "ff_uv" in indf.special_keys:
-            fs = comp_ff(par,lev,indf,filename,inst,basetime,domtraj,res,filtrad,subnproc)
+            fs = comp_ff(par,lev,filename,indf,inst,basetime,domtraj,res,filtrad,subnproc)
 
         #Special case: decumulate rain rate
         rrdecum, rrbefore = ifdecum(indf)

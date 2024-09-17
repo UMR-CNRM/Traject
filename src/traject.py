@@ -360,7 +360,7 @@ def track(algo,indf,timetraj,**kwargs):
             if algo2.parallel["write_parall"] == "True":
                 print("WRITE PARALLEL")
                 write_parall = True
-            execwrite = concurrent.futures.ProcessPoolExecutor(max_workers=ntasks)
+                execwrite = concurrent.futures.ProcessPoolExecutor(max_workers=ntasks)
     else:
         ntasks = 1
 
@@ -380,6 +380,7 @@ def track(algo,indf,timetraj,**kwargs):
                         print("No Upper-level Parallelisation")
                         outf.append(track_parallel_fc(myalgo_func,0,algo2,indf2,basetime,lmb,imb,reftraj,**kwargs))
                     else: #Parallelisation
+                        print("Compute tracks in parallel - ",ntasks," tasks.")
                         tsk = tsk + 1
                         outf.append(executor.submit(track_parallel_fc,myalgo_func,tsk,algo2,indf2,basetime,lmb,imb,reftraj,**kwargs))
 
@@ -393,9 +394,9 @@ def track(algo,indf,timetraj,**kwargs):
                 try:
                     outtraj, indf3 = out.result()
                 except Exception as exc:
-                    print("Exception raised by Task "+str(tsk)+":",exc)
+                    print("Tracking - Exception raised by Task "+str(tsk)+":",exc)
                     outtraj=[]
-                    indfw=[]
+                    indf3=None
 
             trajlist.extend(outtraj) #Full list of tracks
             for ivi in range(len(outtraj)):
@@ -403,15 +404,14 @@ def track(algo,indf,timetraj,**kwargs):
 
             #Writing outputfile file in parallel if outfile is specified
             if "outfile" in kwargs and write_parall:
-                print("Write in parallel")
+                print("Write in parallel in ",ntasks," files")
                 outfile = '.'.join(kwargs["outfile"].split('.')[0:-1])+"_"+str(tsk)+"."+kwargs["outfile"].split('.')[-1]
                 outw.append(execwrite.submit(write_fc,outtraj,outfile,algo2,indfw))
                 for out1 in outw:
                     try:
                         ot = out1.result()
-                        print(ot)
                     except Exception as exc:
-                        print("Exception raised by Task "+str(tsk)+":",exc)
+                        print("Writing - Exception raised by Task "+str(tsk)+":",exc)
 
     elif indf2.origin=="an" or self.origin=="cl": #algo is applied on instants
         #No parallelization
@@ -456,27 +456,25 @@ def track_parallel_fc(func,b,algo,indf,basetime,lmb,imb,reftraj,**kwargs):
 
     print("Start PROCESS ",b," :",datetime.now().strftime("%H:%M:%S"))
     
-    indf3=copy.deepcopy(indf)
+    indf4=copy.deepcopy(indf)
     if len(lmb)>0: #Several members
         mbs=str(lmb[imb]).rjust(3,'0')
-        indf3.member=mbs
+        indf4.member=mbs
 
-    lfile,linst = indf3.get_filinst(kwargs["termtraj"],basetime)
+    lfile,linst = indf4.get_filinst(kwargs["termtraj"],basetime)
     print("Tracking - "+ str(imb) + ", basetime="+basetime)
-    outtraj = func(algo,indf3,linst,lfile,basetime=basetime,reftraj=[reftraj],**kwargs)
+    outtraj = func(algo,indf4,linst,lfile,basetime=basetime,reftraj=[reftraj],**kwargs)
 
     print("End PROCESS ",b," :",datetime.now().strftime("%H:%M:%S")," - ",len(outtraj)," tracks have been found")
 
-    return outtraj, indf3
+    return outtraj, indf4
 
 def write_fc(ltraj,ofile,algo,lindf):
 
-    print("write_fc")
     if len(ltraj)>0:
         if os.path.exists(ofile):
             os.remove(ofile)
         for i in range(len(ltraj)):
-            print("Track:",ltraj[i])
             Write(ltraj[i],ofile,algo,lindf[i],mode="a")
     else:
         Write([],ofile)
@@ -633,7 +631,6 @@ def Write(traj,outputfile,algo={},indf={},write_diag=True,mode='a'):
     #Some indf and algo information can also be written in the file
     #Output: file (JSON format)
 
-    print("Write ",traj,"in",outputfile)
     if isinstance(traj,list):
         if len(traj)==0:
             with open(outputfile, 'w') as fout:
@@ -658,7 +655,6 @@ def Write(traj,outputfile,algo={},indf={},write_diag=True,mode='a'):
                 result.extend(json.load(infile))
             result.extend([wdict])
 
-        print(result)
         with open(outputfile, 'w') as fout:
             json.dump(result, fout, indent=4)
 
