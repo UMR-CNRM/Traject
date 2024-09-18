@@ -38,7 +38,7 @@ repout='./test2/'
 #PrepareFiles(repin+"algo_testcase2.json",repout+"indef_xtract.json",{"filter":"./tmp/case2/","dirout":repout},{'start':"2020100106",'final':"2020100112",'step':"06"},termtraj={'final':48,'step':3},members=[8,10])
 
 #a/ Compute track using the extracted grib files
-ltraj=track(repin+"algo_testcase2.json",repout+"indef_xtract.json",{'start':"2020100106",'final':"2020100112",'step':"06"},termtraj={'final':48,'step':3},members=[8,10],reftraj=repin+"ALEX_ANA.json",outfile=repout+'track_test_case2a_v'+str(traject_version)+'.json',plotfile=repout+'track_test_case2a_v'+str(traject_version)+'.png')
+ltraj=track(repin+"algo_testcase2_parallel.json",repout+"indef_xtract.json",{'start':"2020100106",'final':"2020100112",'step':"06"},termtraj={'final':48,'step':3},members=[8,10],reftraj=repin+"ALEX_ANA.json",outfile=repout+'track_test_case2a_v'+str(traject_version)+'.json',plotfile=repout+'track_test_case2a_v'+str(traject_version)+'.png')
 
 #b/ Compute track using the domain-filtered data
 #ltraj=track(repin+"algo_testcase2.json",repout+"indef_filter.json",{'start':"2020100106",'final':"2020100112",'step':"06"},termtraj={'final':48,'step':3},reftraj=repin+"ALEX_ANA.json",outfile=repout+'track_test_case2b_v'+str(traject_version)+'.json',plotfile=repout+'track_test_case2b_v'+str(traject_version)+'.png',members=[8,10])

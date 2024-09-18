@@ -330,6 +330,7 @@ def track(algo,indf,timetraj,**kwargs):
 
     #Initialisation of trajlist
     outf=[]
+    outw=[]
     trajlist=[]
     indfw=[]
 
@@ -339,6 +340,7 @@ def track(algo,indf,timetraj,**kwargs):
     else:
         lmb=[]
         nmb=1
+    print("List members :", lmb)
 
     #Read reftraj (if any)
     if "reftraj" in kwargs:
@@ -350,10 +352,17 @@ def track(algo,indf,timetraj,**kwargs):
         nref = 0
 
     #Parallelization options (only applies on fc)
+    write_parall = False
     if "ntasks" in algo2.parallel:
         ntasks = algo2.parallel["ntasks"]
+        print("Compute ",ntasks," tracks in parallel.")
         #executor = concurrent.futures.ThreadPoolExecutor(max_workers=ntasks)
         executor = concurrent.futures.ProcessPoolExecutor(max_workers=ntasks)
+        if "write_parall" in algo2.parallel:
+            if algo2.parallel["write_parall"] == "True":
+                print("Writing output files will be done in parallel")
+                write_parall = True
+                execwrite = concurrent.futures.ProcessPoolExecutor(max_workers=ntasks)
     else:
         ntasks = 1
 
@@ -376,7 +385,6 @@ def track(algo,indf,timetraj,**kwargs):
                         tsk = tsk + 1
                         outf.append(executor.submit(track_parallel_fc,myalgo_func,tsk,algo2,indf2,basetime,lmb,imb,reftraj,**kwargs))
 
-                    
         tsk = 0 
         for out in outf:
             if ntasks==1:
@@ -386,12 +394,25 @@ def track(algo,indf,timetraj,**kwargs):
                 try:
                     outtraj, indf3 = out.result()
                 except Exception as exc:
-                    print("Exception raised by Task "+str(tsk)+":",exc)
+                    print("Tracking - Exception raised by Task "+str(tsk)+":",exc)
                     outtraj=[]
-                    indfw=[]
+                    indf3=[]
 
-            if len(outtraj)>0:
-                trajlist.extend(outtraj)
+            #Writing outputfile file in parallel if outfile is specified
+            if "outfile" in kwargs and write_parall:
+                outfile = '.'.join(kwargs["outfile"].split('.')[0:-1])+"_"+str(tsk)+"."+kwargs["outfile"].split('.')[-1]
+                print("Write in parallel file ",outfile)
+                indfw = []
+                for ivi in range(len(outtraj)):
+                    indfw.append(copy.deepcopy(indf3))
+                outw.append(execwrite.submit(write_fc,outtraj,outfile,algo2,indfw))
+                for out1 in outw:
+                    try:
+                        ot = out1.result()
+                    except Exception as exc:
+                        print("Writing - Exception raised by Task "+str(tsk)+":",exc)
+            else:
+                trajlist.extend(outtraj) #Full list of tracks
                 for ivi in range(len(outtraj)):
                     indfw.append(copy.deepcopy(indf3))
 
@@ -408,18 +429,11 @@ def track(algo,indf,timetraj,**kwargs):
         exit()
 
     #Writing outputfile file if outfile is specified
-    if "outfile" in kwargs:
+    if "outfile" in kwargs and not write_parall:
+        print("Write all tracks in single file")
         outfile = kwargs["outfile"]
-        if len(trajlist)>0:
-            print("Write tracks in "+ outfile)
-            if os.path.exists(outfile):
-                os.remove(outfile)
-            for i in range(len(trajlist)):
-                Write(trajlist[i],outfile,algo2,indfw[i],mode="a")
-        else:
-            Write([],outfile)
+        write_fc(trajlist,outfile,algo2,indfw)
 
-    #Plotting tracks if plotfile is specified
     if "plotfile" in kwargs and len(trajlist)>0:
         if algo2.domtraj is None:
             varname=list(algo.parfilt.keys())
@@ -445,18 +459,28 @@ def track_parallel_fc(func,b,algo,indf,basetime,lmb,imb,reftraj,**kwargs):
 
     print("Start PROCESS ",b," :",datetime.now().strftime("%H:%M:%S"))
     
-    indf3=copy.deepcopy(indf)
+    indf4=copy.deepcopy(indf)
     if len(lmb)>0: #Several members
         mbs=str(lmb[imb]).rjust(3,'0')
-        indf3.member=mbs
+        indf4.member=mbs
+        print("Tracking - member="+ str(lmb[imb]) + ", basetime="+basetime)
 
-    lfile,linst = indf3.get_filinst(kwargs["termtraj"],basetime)
-    print("Tracking - "+ str(imb) + ", basetime="+basetime)
-    outtraj = func(algo,indf3,linst,lfile,basetime=basetime,reftraj=[reftraj],**kwargs)
+    lfile,linst = indf4.get_filinst(kwargs["termtraj"],basetime)
+    outtraj = func(algo,indf4,linst,lfile,basetime=basetime,reftraj=[reftraj],**kwargs)
 
     print("End PROCESS ",b," :",datetime.now().strftime("%H:%M:%S")," - ",len(outtraj)," tracks have been found")
 
-    return outtraj, indf3
+    return outtraj, indf4
+
+def write_fc(ltraj,ofile,algo,lindf):
+
+    if len(ltraj)>0:
+        if os.path.exists(ofile):
+            os.remove(ofile)
+        for i in range(len(ltraj)):
+            Write(ltraj[i],ofile,algo,lindf[i],mode="a")
+    else:
+        Write([],ofile)
 
 def Plot(ltraj,dom,outputfile="out.png"):
     #Plots on a single figure the tracks that are
