@@ -419,8 +419,8 @@ class ObjectM:
                             isok = True
                             for ivi in range(4):
                                 isok = isok and (deriv[ivi]<dt or 2*deriv2[ivi]<dt)
-                            if isok:
-                                print("deriv T ok")
+                            #if isok:
+                            #    print("deriv T ok")
                         else:
                             isok=False
 

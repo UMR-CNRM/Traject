@@ -340,6 +340,7 @@ def track(algo,indf,timetraj,**kwargs):
     else:
         lmb=[]
         nmb=1
+    print("List members :", lmb)
 
     #Read reftraj (if any)
     if "reftraj" in kwargs:
@@ -354,11 +355,12 @@ def track(algo,indf,timetraj,**kwargs):
     write_parall = False
     if "ntasks" in algo2.parallel:
         ntasks = algo2.parallel["ntasks"]
+        print("Compute ",ntasks," tracks in parallel.")
         #executor = concurrent.futures.ThreadPoolExecutor(max_workers=ntasks)
         executor = concurrent.futures.ProcessPoolExecutor(max_workers=ntasks)
         if "write_parall" in algo2.parallel:
             if algo2.parallel["write_parall"] == "True":
-                print("WRITE PARALLEL")
+                print("Writing output files will be done in parallel")
                 write_parall = True
                 execwrite = concurrent.futures.ProcessPoolExecutor(max_workers=ntasks)
     else:
@@ -380,11 +382,9 @@ def track(algo,indf,timetraj,**kwargs):
                         print("No Upper-level Parallelisation")
                         outf.append(track_parallel_fc(myalgo_func,0,algo2,indf2,basetime,lmb,imb,reftraj,**kwargs))
                     else: #Parallelisation
-                        print("Compute tracks in parallel - ",ntasks," tasks.")
                         tsk = tsk + 1
                         outf.append(executor.submit(track_parallel_fc,myalgo_func,tsk,algo2,indf2,basetime,lmb,imb,reftraj,**kwargs))
 
-                    
         tsk = 0 
         for out in outf:
             if ntasks==1:
@@ -396,22 +396,25 @@ def track(algo,indf,timetraj,**kwargs):
                 except Exception as exc:
                     print("Tracking - Exception raised by Task "+str(tsk)+":",exc)
                     outtraj=[]
-                    indf3=None
-
-            trajlist.extend(outtraj) #Full list of tracks
-            for ivi in range(len(outtraj)):
-                indfw.append(copy.deepcopy(indf3))
+                    indf3=[]
 
             #Writing outputfile file in parallel if outfile is specified
             if "outfile" in kwargs and write_parall:
-                print("Write in parallel in ",ntasks," files")
                 outfile = '.'.join(kwargs["outfile"].split('.')[0:-1])+"_"+str(tsk)+"."+kwargs["outfile"].split('.')[-1]
+                print("Write in parallel file ",outfile)
+                indfw = []
+                for ivi in range(len(outtraj)):
+                    indfw.append(copy.deepcopy(indf3))
                 outw.append(execwrite.submit(write_fc,outtraj,outfile,algo2,indfw))
                 for out1 in outw:
                     try:
                         ot = out1.result()
                     except Exception as exc:
                         print("Writing - Exception raised by Task "+str(tsk)+":",exc)
+            else:
+                trajlist.extend(outtraj) #Full list of tracks
+                for ivi in range(len(outtraj)):
+                    indfw.append(copy.deepcopy(indf3))
 
     elif indf2.origin=="an" or self.origin=="cl": #algo is applied on instants
         #No parallelization
@@ -460,9 +463,9 @@ def track_parallel_fc(func,b,algo,indf,basetime,lmb,imb,reftraj,**kwargs):
     if len(lmb)>0: #Several members
         mbs=str(lmb[imb]).rjust(3,'0')
         indf4.member=mbs
+        print("Tracking - member="+ str(lmb[imb]) + ", basetime="+basetime)
 
     lfile,linst = indf4.get_filinst(kwargs["termtraj"],basetime)
-    print("Tracking - "+ str(imb) + ", basetime="+basetime)
     outtraj = func(algo,indf4,linst,lfile,basetime=basetime,reftraj=[reftraj],**kwargs)
 
     print("End PROCESS ",b," :",datetime.now().strftime("%H:%M:%S")," - ",len(outtraj)," tracks have been found")
